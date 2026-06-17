@@ -1,6 +1,6 @@
 # Competitor Landscape — Podmonkey
 
-Side-by-side comparison of tools in the **Kubernetes cost estimation / monitoring** space. Last updated: 2026-06-15.
+Side-by-side comparison of tools in the **Kubernetes cost estimation / monitoring** space. Last updated: 2026-06-17.
 
 ---
 
@@ -33,7 +33,7 @@ Side-by-side comparison of tools in the **Kubernetes cost estimation / monitorin
 
 | Tool | Type | Input | YAML paste web UI | Multi-cloud compare | Hetzner / cheap VPS | Cluster agent | Open source | Price | Best for |
 |------|------|-------|-------------------|---------------------|---------------------|---------------|-------------|-------|----------|
-| **[Podmonkey](https://github.com/MarketMadi/podmonkey)** (planned) | Static estimator | Raw K8s YAML | **Yes** (core) | **Yes** (4 providers) | **Yes** | No | **MIT** | Free | Pre-deploy comparison, demos, tutorials |
+| **[Podmonkey](https://github.com/MarketMadi/podmonkey)** · [demo](https://marketmadi.github.io/podmonkey/) | Static estimator | Raw K8s YAML | **Yes** (core) | **Yes** (4 providers) | **Yes** | No | **MIT** | Free | Pre-deploy comparison, demos, tutorials |
 | **[Kubecost](https://www.kubecost.com/)** | In-cluster FinOps | Live cluster + YAML predict | No (dashboard) | Yes (dashboard) | Custom pricing | **Yes** (Helm) | Core via OpenCost | Free tier + enterprise | Chargeback, allocation, enterprise |
 | **[OpenCost](https://opencost.io/)** | CNCF spec + engine | Live cluster | No | Yes | Custom pricing | **Yes** | **Apache 2.0** | Free | Vendor-neutral standard, OSS monitoring |
 | **[kubectl-cost predict](https://github.com/kubecost/kubectl-cost)** | CLI plugin | YAML file | No | Limited | Default AWS-ish rates | Optional Kubecost API | **Apache 2.0** | Free | CI/terminal, diff vs cluster |
@@ -167,7 +167,7 @@ These solve **different** problems but appear in the same Google searches and bu
 | Live usage metrics | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ SaaS | ❌ |
 | Idle cost allocation | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
 | Invoice reconciliation | ❌ | ✅ | ⚠️ | ❌ | ✅ | receipts | ❌ |
-| CI / PR integration | roadmap | ✅ | ⚠️ | ❌ | ❌ | ✅ | ✅ |
+| CI / PR integration | ✅ | ✅ | ⚠️ | ❌ | ❌ | ✅ | ✅ |
 | Open source | ✅ MIT | partial | ✅ | ❌ | ❌ | CLI | ✅ |
 | No login demo | ✅ | ❌ | ❌ | ✅ | ⚠️ | ⚠️ | ⚠️ |
 

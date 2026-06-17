@@ -19,12 +19,30 @@ Podmonkey is an open-source, manifest-first Kubernetes cost estimator. It parses
 
 ## Try it
 
+**[Live demo →](https://marketmadi.github.io/podmonkey/)** — paste YAML, compare AWS / GCP / Azure / Hetzner in one view.
+
+Or run locally:
+
 ```bash
 cd apps/web
 npm install
 npm run dev
 # → http://localhost:3002
 ```
+
+Deploy your own copy: [Vercel](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMarketMadi%2Fpodmonkey&root-directory=apps%2Fweb) (set root to `apps/web`) or enable **GitHub Pages** in repo settings (workflow `.github/workflows/deploy-web.yml` publishes on push to `main`).
+
+## Add to your repo
+
+Copy [`.github/workflows/podmonkey-estimate.example.yml`](.github/workflows/podmonkey-estimate.example.yml) to `.github/workflows/podmonkey.yml` and point `path` at your manifests:
+
+```yaml
+- uses: MarketMadi/podmonkey@v0.1.0
+  with:
+    path: ./k8s
+```
+
+Podmonkey posts (or updates) a PR comment with per-provider monthly ranges. See [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md).
 
 ## How it works
 
@@ -68,7 +86,7 @@ podmonkey/
 ## Development
 
 ```bash
-# Root: shared engine tests (16 golden + unit tests)
+# Root: shared engine tests (22 golden + unit tests)
 npm install
 npm test
 npm run build

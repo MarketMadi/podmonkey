@@ -1,0 +1,26 @@
+# Copy to your repo as .github/workflows/podmonkey.yml
+# Estimates Kubernetes manifests on pull requests and posts a cost comment.
+
+name: Podmonkey
+
+on:
+  pull_request:
+    paths:
+      - '**.yaml'
+      - '**.yml'
+      - 'k8s/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  estimate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cost estimate
+        uses: MarketMadi/podmonkey@v0.1.0
+        with:
+          path: ./k8s
