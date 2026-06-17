@@ -1,0 +1,40 @@
+{
+  "provider": "azure",
+  "service": "aks",
+  "region": "eastus",
+  "as_of": "2026-06-15",
+  "sources": [
+    "https://azure.microsoft.com/en-us/pricing/details/kubernetes-service/",
+    "https://azure.microsoft.com/en-us/pricing/details/virtual-machines/linux/"
+  ],
+  "hours_per_month": 730,
+  "control_plane": {
+    "hourly_usd": 0,
+    "tier": "free",
+    "standard_hourly_usd": 0.1,
+    "notes": "Free tier default; Standard SLA is $0.10/hr"
+  },
+  "reference_instance": {
+    "type": "Standard_D2s_v5",
+    "vcpu": 2,
+    "memory_gib": 8,
+    "hourly_usd": 0.096,
+    "notes": "Linux pay-as-you-go eastus approximate"
+  },
+  "rates": {
+    "cpu_per_vcpu_hour_usd": 0.0416,
+    "memory_per_gib_hour_usd": 0.0052,
+    "gpu_per_hour_usd": null
+  },
+  "storage": {
+    "managed_premium_per_gib_month_usd": 0.15,
+    "managed_standard_per_gib_month_usd": 0.04,
+    "default_class": "managed-premium"
+  },
+  "load_balancer_monthly_usd": 18.0,
+  "defaults": {
+    "missing_cpu": "100m",
+    "missing_memory": "128Mi",
+    "daemonset_node_count": 3
+  }
+}
