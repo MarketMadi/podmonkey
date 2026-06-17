@@ -1,0 +1,47 @@
+# Personal blog — single Ghost instance, content PVC, public LoadBalancer.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ghost
+  namespace: blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ghost
+  template:
+    metadata:
+      labels:
+        app: ghost
+    spec:
+      containers:
+        - name: ghost
+          image: ghost:5.82
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ghost-content
+  namespace: blog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghost-public
+  namespace: blog
+spec:
+  type: LoadBalancer
+  selector:
+    app: ghost
+  ports:
+    - port: 443

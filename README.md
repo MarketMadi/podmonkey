@@ -19,7 +19,7 @@ Podmonkey is an open-source, manifest-first Kubernetes cost estimator. It parses
 
 ## Try it
 
-**[Live demo →](https://marketmadi.github.io/podmonkey/)** — paste YAML, compare AWS / GCP / Azure / Hetzner in one view.
+**[Live demo →](https://marketmadi.github.io/podmonkey/)** — paste YAML, compare AWS / GCP / Azure / Hetzner in one view. Load examples from the dropdown (nginx, Postgres HA, SaaS stack, monitoring, and more in [`examples/`](examples/)).
 
 Or run locally:
 

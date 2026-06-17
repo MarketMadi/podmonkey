@@ -1,0 +1,81 @@
+# Small SaaS — API + background workers + frontend, one public LoadBalancer.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: acme
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: acme/api:2.4.1
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: acme
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: acme/worker:2.4.1
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: acme
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: acme/web:2.4.1
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-public
+  namespace: acme
+spec:
+  type: LoadBalancer
+  selector:
+    app: api
+  ports:
+    - port: 443

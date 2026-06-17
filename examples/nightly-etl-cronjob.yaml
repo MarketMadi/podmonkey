@@ -1,0 +1,21 @@
+# Nightly ETL — CronJob with parallel pods (batch/analytics pattern).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nightly-etl
+  namespace: analytics
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      parallelism: 4
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: etl
+              image: acme/etl:1.0.0
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: "8Gi"
