@@ -89,7 +89,7 @@ Podmonkey fills the gap: **manifest-first, zero-install, multi-provider comparis
 
 Podmonkey v1 uses **Model A: Request-rate estimation** (aligned with [Kubecost Predict](https://www.apptio.com/blog/resource-cost-prediction/) without a cluster and the [OpenCost workload allocation formula](https://opencost.io/docs/specification/)).
 
-Full detail: [METHODOLOGY.md](./METHODOLOGY.md).
+Full detail: [METHODOLOGY.md](./METHODOLOGY.md). Accuracy roadmap: [CALCULATION_PLAN.md](./CALCULATION_PLAN.md).
 
 ### Monthly total (per provider)
 

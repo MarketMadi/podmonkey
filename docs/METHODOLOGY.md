@@ -2,6 +2,8 @@
 
 This document defines **exactly** how Podmonkey turns Kubernetes YAML into monthly dollar estimates. It is aligned with industry-standard approaches from the [OpenCost Specification](https://opencost.io/docs/specification/) and [Kubecost](https://kubecost.github.io/cost-analyzer/), adapted for **static manifest analysis** (no running cluster, no Prometheus, no billing API).
 
+> **Roadmap for making numbers decision-grade:** See [CALCULATION_PLAN.md](./CALCULATION_PLAN.md) — dual compute models (marginal + node floor), rate normalization fixes, confidence scoring, and CI validation. This methodology doc describes the **current** engine; the calculation plan describes what we are building toward.
+
 ---
 
 ## 1. Design constraints

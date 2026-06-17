@@ -1,0 +1,28 @@
+# Example: run Podmonkey on this repo's example manifests.
+# For your own repo, copy .github/workflows/podmonkey-estimate.example.yml
+
+name: Podmonkey (examples)
+
+on:
+  pull_request:
+    paths:
+      - 'examples/**'
+      - 'src/**'
+      - 'pricing/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  estimate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Estimate example manifests
+        uses: ./
+        with:
+          path: examples
+          comment-on-pr: ${{ github.event_name == 'pull_request' }}
