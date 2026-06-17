@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { runEstimate, PROVIDER_LABELS } from '../lib/engine';
 import { DEFAULT_EXAMPLE, EXAMPLES } from '../lib/examples';
-import type { ProviderId } from '../../../src/types';
+import type { ConfidenceLevel, MonthlyUsdRange, ProviderId } from '../../../src/types';
 import styles from './page.module.css';
 
 function formatUsd(n: number): string {
@@ -14,16 +14,29 @@ function formatUsd(n: number): string {
   }).format(n);
 }
 
-function formatComputeRange(
-  costs: Partial<Record<ProviderId, number>>,
+function formatUsdRange(range: MonthlyUsdRange): string {
+  if (range.min === range.max) return formatUsd(range.max);
+  return `${formatUsd(range.min)}–${formatUsd(range.max)}`;
+}
+
+function formatProviderRange(
+  ranges: Partial<Record<ProviderId, MonthlyUsdRange>>,
 ): string {
-  const values = Object.values(costs).filter((v): v is number => v !== undefined);
+  const values = Object.values(ranges).filter(
+    (v): v is MonthlyUsdRange => v !== undefined,
+  );
   if (values.length === 0) return '—';
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  if (min === max) return formatUsd(min);
+  const min = Math.min(...values.map((r) => r.min));
+  const max = Math.max(...values.map((r) => r.max));
+  if (min === max) return formatUsd(max);
   return `${formatUsd(min)}–${formatUsd(max)}`;
 }
+
+const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
+  high: 'High confidence',
+  medium: 'Medium confidence',
+  low: 'Low confidence',
+};
 
 export default function Home() {
   const [yaml, setYaml] = useState<string>(DEFAULT_EXAMPLE.yaml);
@@ -41,7 +54,7 @@ export default function Home() {
   const cheapest = useMemo(() => {
     if (!result?.providers.length) return null;
     return result.providers.reduce((a, b) =>
-      a.totalMonthlyUsd < b.totalMonthlyUsd ? a : b,
+      a.totalMonthlyUsdRange.max < b.totalMonthlyUsdRange.max ? a : b,
     );
   }, [result]);
 
@@ -56,7 +69,7 @@ export default function Home() {
             Paste Kubernetes YAML → compare planning-grade monthly estimates
             across clouds.{' '}
             <a
-              href="https://github.com/MarketMadi/podmonkey/blob/main/docs/METHODOLOGY.md"
+              href="https://github.com/MarketMadi/podmonkey/blob/main/docs/CALCULATION_PLAN.md"
               target="_blank"
               rel="noreferrer"
             >
@@ -65,8 +78,9 @@ export default function Home() {
           </p>
         </div>
         <p className={styles.disclaimer}>
-          Planning estimates only — not an invoice. Based on resource{' '}
-          <strong>requests</strong>, on-demand rates, 730 h/mo.
+          Planning estimates only — not an invoice. Shows a{' '}
+          <strong>range</strong> from resource requests (marginal) to whole-VM
+          node floor. Excludes egress, NAT, and Spot discounts.
         </p>
       </header>
 
@@ -116,6 +130,20 @@ export default function Home() {
         <section className={styles.resultsPanel}>
           {result && (
             <>
+              <div
+                className={styles.confidence}
+                data-level={result.confidence.level}
+              >
+                <strong>{CONFIDENCE_LABEL[result.confidence.level]}</strong>
+                <span>{result.confidence.score}/100</span>
+                {result.confidence.level === 'low' && (
+                  <p className={styles.confidenceNote}>
+                    Estimate may differ ±50%+ from an actual bill — add resource
+                    requests to improve accuracy.
+                  </p>
+                )}
+              </div>
+
               <div className={styles.totals}>
                 <div className={styles.stat}>
                   <span className={styles.statLabel}>Total CPU requested</span>
@@ -151,7 +179,7 @@ export default function Home() {
                       <h3>{PROVIDER_LABELS[p.provider as ProviderId]}</h3>
                       <p className={styles.region}>{p.region}</p>
                       <p className={styles.price}>
-                        {formatUsd(p.totalMonthlyUsd)}
+                        {formatUsdRange(p.totalMonthlyUsdRange)}
                         <span>/mo</span>
                       </p>
                       {isCheapest && (
@@ -161,11 +189,18 @@ export default function Home() {
                         {p.lineItems.map((item) => (
                           <li key={item.label}>
                             <span>{item.label}</span>
-                            <span>{formatUsd(item.monthlyUsd)}</span>
+                            <span>
+                              {item.monthlyUsdRange
+                                ? formatUsdRange(item.monthlyUsdRange)
+                                : formatUsd(item.monthlyUsd)}
+                            </span>
                           </li>
                         ))}
                       </ul>
-                      <p className={styles.asOf}>Pricing as of {p.asOf}</p>
+                      <p className={styles.asOf}>
+                        Pricing as of {p.asOf} · {p.nodeCount} node
+                        {p.nodeCount !== 1 ? 's' : ''} (floor)
+                      </p>
                     </article>
                   );
                 })}
@@ -197,7 +232,7 @@ export default function Home() {
                             <td>{w.cpuCores.toFixed(2)}</td>
                             <td>{w.memoryGiB.toFixed(2)} GiB</td>
                             <td>
-                              {formatComputeRange(w.computeMonthlyUsd)}
+                              {formatProviderRange(w.computeMonthlyUsdRange)}
                             </td>
                           </tr>
                         ))}
@@ -205,7 +240,7 @@ export default function Home() {
                     </table>
                   </div>
                   <p className={styles.tableNote}>
-                    Compute $/mo is CPU + memory requests only (excludes
+                    Compute range = marginal requests .. node floor (excludes
                     control plane, storage, load balancers).
                   </p>
                 </>

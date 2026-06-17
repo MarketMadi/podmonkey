@@ -9,15 +9,12 @@ import type {
   ProviderId,
   WorkloadSummary,
 } from '../types';
+import { assessConfidence } from '../pricing/confidence';
+import { resolveRates } from '../pricing/derive-rates';
+import { computeNodeFloorMonthly } from '../pricing/node-floor';
+import { storageRateGiBMonth } from '../pricing/storage-rate';
 import { roundUsd } from '../units';
 import { collectWarnings } from '../warnings/index';
-
-function storageRateGiBMonth(sheet: PriceSheet): number {
-  const s = sheet.storage;
-  const key = Object.keys(s).find((k) => k.endsWith('_per_gib_month_usd'));
-  if (key && typeof s[key] === 'number') return s[key] as number;
-  return 0.08;
-}
 
 function workloadTotals(workload: ParsedWorkload): {
   cpuCores: number;
@@ -30,18 +27,6 @@ function workloadTotals(workload: ParsedWorkload): {
     memoryGiB += c.memoryGiB * workload.replicas;
   }
   return { cpuCores, memoryGiB };
-}
-
-function workloadComputeMonthly(
-  workload: ParsedWorkload,
-  sheet: PriceSheet,
-): number {
-  const { cpuCores, memoryGiB } = workloadTotals(workload);
-  const h = sheet.hours_per_month;
-  return roundUsd(
-    cpuCores * h * sheet.rates.cpu_per_vcpu_hour_usd +
-      memoryGiB * h * sheet.rates.memory_per_gib_hour_usd,
-  );
 }
 
 function sumWorkloadResources(parse: ParseResult): {
@@ -61,6 +46,44 @@ function sumWorkloadResources(parse: ParseResult): {
   return { cpuCores, memoryGiB };
 }
 
+function computeMarginalMonthly(
+  cpuCores: number,
+  memoryGiB: number,
+  sheet: PriceSheet,
+): number {
+  const rates = resolveRates(sheet);
+  const h = sheet.hours_per_month;
+  return roundUsd(
+    cpuCores * h * rates.cpu_per_vcpu_hour_usd +
+      memoryGiB * h * rates.memory_per_gib_hour_usd,
+  );
+}
+
+function computeCostRange(
+  cpuCores: number,
+  memoryGiB: number,
+  sheet: PriceSheet,
+  minNodes: number,
+): { min: number; max: number; nodes: number } {
+  const marginal = computeMarginalMonthly(cpuCores, memoryGiB, sheet);
+  const { nodes, monthlyUsd: nodeFloor } = computeNodeFloorMonthly(
+    cpuCores,
+    memoryGiB,
+    sheet,
+    minNodes,
+  );
+
+  if (sheet.compute_model === 'node_only') {
+    return { min: nodeFloor, max: nodeFloor, nodes };
+  }
+
+  return {
+    min: Math.min(marginal, nodeFloor),
+    max: Math.max(marginal, nodeFloor),
+    nodes,
+  };
+}
+
 function controlPlaneMonthly(
   sheet: PriceSheet,
   options: EstimateOptions,
@@ -77,34 +100,56 @@ function controlPlaneMonthly(
   return roundUsd(cp.hourly_usd * h);
 }
 
+function storageCostMonthly(parse: ParseResult, sheet: PriceSheet): number {
+  return roundUsd(
+    parse.pvcs.reduce((sum, pvc) => {
+      const rate = storageRateGiBMonth(sheet, pvc.storageClass);
+      return sum + pvc.storageGiB * rate;
+    }, 0),
+  );
+}
+
 export function estimateForProvider(
   parse: ParseResult,
   sheet: PriceSheet,
   options: EstimateOptions = {},
 ): ProviderEstimate {
   const { cpuCores, memoryGiB } = sumWorkloadResources(parse);
-  const h = sheet.hours_per_month;
+  const minNodes = options.minNodes ?? 1;
 
-  const computeCpu = roundUsd(
-    cpuCores * h * sheet.rates.cpu_per_vcpu_hour_usd,
-  );
-  const computeMem = roundUsd(
-    memoryGiB * h * sheet.rates.memory_per_gib_hour_usd,
-  );
+  const compute = computeCostRange(cpuCores, memoryGiB, sheet, minNodes);
 
-  const storageGiB = parse.pvcs.reduce((s, p) => s + p.storageGiB, 0);
-  const storageRate = storageRateGiBMonth(sheet);
-  const storageCost = roundUsd(storageGiB * storageRate);
+  const storageCost = storageCostMonthly(parse, sheet);
 
   const lbCount = parse.services.filter((s) => s.type === 'LoadBalancer').length;
   const lbCost = roundUsd(lbCount * sheet.load_balancer_monthly_usd);
 
   const cpCost = controlPlaneMonthly(sheet, options);
 
+  const fixedOverhead = roundUsd(storageCost + lbCost + cpCost);
+  const totalMin = roundUsd(compute.min + fixedOverhead);
+  const totalMax = roundUsd(compute.max + fixedOverhead);
+
+  const computeLabel =
+    sheet.compute_model === 'node_only'
+      ? `Compute (nodes × ${sheet.reference_instance.type})`
+      : `Compute (requests .. ${compute.nodes}× ${sheet.reference_instance.type})`;
+
   const lineItems: CostLineItem[] = [
-    { category: 'compute', label: 'CPU (requests)', monthlyUsd: computeCpu },
-    { category: 'compute', label: 'Memory (requests)', monthlyUsd: computeMem },
-    { category: 'storage', label: 'Persistent volumes', monthlyUsd: storageCost },
+    {
+      category: 'compute',
+      label: computeLabel,
+      monthlyUsd: compute.max,
+      monthlyUsdRange:
+        compute.min !== compute.max
+          ? { min: compute.min, max: compute.max }
+          : undefined,
+    },
+    {
+      category: 'storage',
+      label: 'Persistent volumes',
+      monthlyUsd: storageCost,
+    },
     {
       category: 'load_balancer',
       label: `Load balancers (×${lbCount})`,
@@ -117,15 +162,17 @@ export function estimateForProvider(
     },
   ];
 
-  const totalMonthlyUsd = roundUsd(
-    lineItems.reduce((sum, i) => sum + i.monthlyUsd, 0),
-  );
-
   return {
     provider: sheet.provider,
     region: sheet.region,
     asOf: sheet.as_of,
-    totalMonthlyUsd,
+    totalMonthlyUsd: totalMax,
+    totalMonthlyUsdRange: { min: totalMin, max: totalMax },
+    computeMonthlyUsdRange: {
+      min: compute.min,
+      max: compute.max,
+    },
+    nodeCount: compute.nodes,
     lineItems,
   };
 }
@@ -142,6 +189,7 @@ export function estimate(
   ).length;
 
   const warnings = collectWarnings(parse);
+  const confidence = assessConfidence(parse);
 
   const providers = sheets.map((sheet) =>
     estimateForProvider(parse, sheet, options),
@@ -149,9 +197,15 @@ export function estimate(
 
   const workloads: WorkloadSummary[] = parse.workloads.map((w) => {
     const { cpuCores: wCpu, memoryGiB: wMem } = workloadTotals(w);
-    const computeMonthlyUsd: Partial<Record<ProviderId, number>> = {};
+    const computeMonthlyUsdRange: Partial<
+      Record<ProviderId, { min: number; max: number }>
+    > = {};
     for (const sheet of sheets) {
-      computeMonthlyUsd[sheet.provider] = workloadComputeMonthly(w, sheet);
+      const range = computeCostRange(wCpu, wMem, sheet, options.minNodes ?? 1);
+      computeMonthlyUsdRange[sheet.provider] = {
+        min: range.min,
+        max: range.max,
+      };
     }
     return {
       kind: w.kind,
@@ -160,7 +214,7 @@ export function estimate(
       replicas: w.replicas,
       cpuCores: wCpu,
       memoryGiB: wMem,
-      computeMonthlyUsd,
+      computeMonthlyUsdRange,
     };
   });
 
@@ -168,6 +222,7 @@ export function estimate(
     providers,
     warnings,
     workloads,
+    confidence,
     totals: { cpuCores, memoryGiB, storageGiB, loadBalancerCount },
   };
 }

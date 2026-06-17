@@ -2,19 +2,22 @@
 
 **Paste Kubernetes YAML. Compare cloud bills. Spot waste before you deploy.**
 
-Podmonkey is an open-source, manifest-first Kubernetes cost estimator. It parses your YAML and produces **planning-grade** monthly cost comparisons across **AWS EKS**, **Google GKE**, **Azure AKS**, and **Hetzner** — no cluster agent, no login, no enterprise sales call.
+Podmonkey is an open-source, manifest-first Kubernetes cost estimator. It parses your YAML and produces **planning-grade** monthly cost **ranges** across **AWS EKS**, **Google GKE**, **Azure AKS**, and **Hetzner** — no cluster agent, no login, no enterprise sales call.
 
-> Planning estimates only — not an invoice. See [docs/METHODOLOGY.md](docs/METHODOLOGY.md) for the exact math (aligned with [OpenCost](https://opencost.io/docs/specification/) and [Kubecost Predict](https://www.apptio.com/blog/resource-cost-prediction/)).
+> Planning estimates only — not an invoice. See [docs/CALCULATION_PLAN.md](docs/CALCULATION_PLAN.md) for how we make numbers decision-grade, and [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for what the code does today.
 
 ## Quick links
 
 | Doc | Description |
 |-----|-------------|
+| [Current state](docs/CURRENT_STATE.md) | Audit: claims vs code, gaps, extension points |
+| [Calculation plan](docs/CALCULATION_PLAN.md) | Dual models, rate derivation, validation |
 | [Product spec](docs/PRODUCT.md) | Vision, scope, roadmap, warnings |
-| [Methodology](docs/METHODOLOGY.md) | Formulas, price sheet schema, worked example |
+| [Methodology](docs/METHODOLOGY.md) | Formulas, price sheet schema |
 | [Competitors](docs/COMPETITORS.md) | Side-by-side vs Kubecost, ReleaseRun, Optiqor, etc. |
+| [GitHub Action](docs/GITHUB_ACTION.md) | PR cost comments in CI |
 
-## Try it (coming soon)
+## Try it
 
 ```bash
 cd apps/web
@@ -29,27 +32,34 @@ npm run dev
 YAML manifests
     → parse (Deployment, StatefulSet, PVC, Service…)
     → aggregate CPU/RAM/storage/LB counts
-    → multiply by pricing/aws-us-east-1.json (etc.)
-    → compare providers + emit warnings
+    → derive rates from reference_instance (OpenCost Appendix A)
+    → compute marginal .. node-floor range per provider
+    → compare providers + confidence score + warnings
 ```
 
-**Core formula (compute):**
+**Compute (two models, shown as a range):**
 
 ```
-monthly_cpu_cost = cpu_cores × replicas × 730 × $/vcpu-hour
-monthly_mem_cost = memory_giB × replicas × 730 × $/gib-hour
+Model A (marginal):  Σ(requests) × 730h × derived $/vcpu-hr and $/gib-hr
+Model B (node floor): ceil(workload / VM size) × reference_instance hourly × 730h
 ```
 
-Plus control plane, PVC storage, and LoadBalancer flat fees per provider.
+Plus control plane, PVC storage ($/GiB-month), and LoadBalancer flat fees per provider.
+
+Rates are **derived at runtime** from each sheet's `reference_instance` — not the legacy `rates` fields in JSON.
+
+**Example (nginx on AWS EKS):** ~$103–$143/mo without a LoadBalancer; ~$121–$161/mo with one.
 
 ## Project structure
 
 ```
 podmonkey/
-├── docs/           # Product, methodology, competitors
+├── docs/           # Product, methodology, audit
 ├── pricing/        # Versioned provider price sheets (JSON)
 ├── src/
+│   ├── cli/        # CLI entry (estimate command)
 │   ├── parser/     # YAML → normalized workloads
+│   ├── pricing/    # Rate derivation, node floor, confidence
 │   ├── estimator/  # Cost engine
 │   └── warnings/   # Policy rules
 └── apps/web/       # Next.js demo UI
@@ -58,9 +68,21 @@ podmonkey/
 ## Development
 
 ```bash
-# Root: shared engine tests
+# Root: shared engine tests (16 golden + unit tests)
 npm install
 npm test
+npm run build
+
+# CLI
+npm run podmonkey -- estimate -f examples/nginx-deployment.yaml
+# or after build:
+npx podmonkey estimate -f examples/nginx-deployment.yaml
+kubectl get deploy,svc -o yaml | npx podmonkey estimate -f - --json
+
+# GitHub Action (PR comments) — see docs/GITHUB_ACTION.md
+# uses: MarketMadi/podmonkey@v0.1.0
+#   with:
+#     path: ./k8s
 
 # Web app
 cd apps/web && npm install && npm run dev
@@ -68,12 +90,14 @@ cd apps/web && npm install && npm run dev
 
 ## Pricing data
 
-Price sheets live in `pricing/` with `as_of` dates and source URLs. Example:
+Price sheets live in `pricing/` with `as_of` dates, `reference_instance`, and source URLs:
 
 - `pricing/aws-us-east-1.json`
-- `pricing/gcp-us-central1.json` (planned)
-- `pricing/azure-eastus.json` (planned)
-- `pricing/hetzner-fsn1.json` (planned)
+- `pricing/gcp-us-central1.json`
+- `pricing/azure-eastus.json`
+- `pricing/hetzner-fsn1.json` (`compute_model: node_only`)
+
+Rate derivation: [docs/CALCULATION_PLAN.md](docs/CALCULATION_PLAN.md). CI asserts every sheet normalizes to its reference VM hourly price.
 
 ## Differentiation
 
@@ -81,6 +105,7 @@ Price sheets live in `pricing/` with `as_of` dates and source URLs. Example:
 |-------------|---------------|-------------|
 | No cluster install | Prices **your YAML**, not sliders | Open source, not SaaS funnel |
 | Multi-cloud compare in one view | Per-workload breakdown | Transparent methodology |
+| Honest **range** (marginal .. node floor) | — | — |
 
 ## License
 
@@ -88,4 +113,4 @@ MIT — see [LICENSE](LICENSE).
 
 ## Disclaimer
 
-Podmonkey is not affiliated with AWS, Google, Microsoft, Hetzner, Kubecost, or OpenCost. Estimates use public on-demand pricing and resource **requests** from your manifests. Actual bills depend on usage, discounts, networking, and bin-packing.
+Podmonkey is not affiliated with AWS, Google, Microsoft, Hetzner, Kubecost, or OpenCost. Estimates use public on-demand pricing and resource **requests** from your manifests. Excludes egress, NAT, Spot/reserved discounts, and idle node capacity. Actual bills depend on usage, discounts, networking, and bin-packing.

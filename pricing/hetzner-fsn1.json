@@ -30,6 +30,7 @@
     "default_class": "volume"
   },
   "load_balancer_monthly_usd": 5.9,
+  "compute_model": "node_only",
   "defaults": {
     "missing_cpu": "100m",
     "missing_memory": "128Mi",

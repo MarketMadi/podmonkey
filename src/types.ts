@@ -72,6 +72,8 @@ export interface PriceSheet {
     default_class?: string;
   };
   load_balancer_monthly_usd: number;
+  /** Hetzner bills whole VPS instances — use node floor only for compute. */
+  compute_model?: 'marginal_and_node' | 'node_only';
   defaults: {
     missing_cpu: string;
     missing_memory: string;
@@ -79,17 +81,28 @@ export interface PriceSheet {
   };
 }
 
+export interface MonthlyUsdRange {
+  min: number;
+  max: number;
+}
+
 export interface CostLineItem {
   category: 'compute' | 'storage' | 'load_balancer' | 'control_plane';
   label: string;
   monthlyUsd: number;
+  /** Set when min ≠ max (e.g. compute marginal vs node floor). */
+  monthlyUsdRange?: MonthlyUsdRange;
 }
 
 export interface ProviderEstimate {
   provider: ProviderId;
   region: string;
   asOf: string;
+  /** Conservative total for ranking (node floor + overhead). */
   totalMonthlyUsd: number;
+  totalMonthlyUsdRange: MonthlyUsdRange;
+  computeMonthlyUsdRange: MonthlyUsdRange;
+  nodeCount: number;
   lineItems: CostLineItem[];
 }
 
@@ -108,6 +121,16 @@ export interface EstimateOptions {
   /** AKS tier: free (default) or standard */
   aksTier?: 'free' | 'standard';
   daemonsetNodeCount?: number;
+  /** Minimum worker nodes for node-floor model (default 1). */
+  minNodes?: number;
+}
+
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
+export interface ConfidenceResult {
+  score: number;
+  level: ConfidenceLevel;
+  factors: string[];
 }
 
 export interface WorkloadSummary {
@@ -119,14 +142,15 @@ export interface WorkloadSummary {
   cpuCores: number;
   /** Total memory GiB requested (containers × replicas). */
   memoryGiB: number;
-  /** Compute-only monthly cost per provider (no control plane / LB / PVC). */
-  computeMonthlyUsd: Partial<Record<ProviderId, number>>;
+  /** Compute-only monthly cost range per provider (marginal .. node floor). */
+  computeMonthlyUsdRange: Partial<Record<ProviderId, MonthlyUsdRange>>;
 }
 
 export interface EstimateResult {
   providers: ProviderEstimate[];
   warnings: Warning[];
   workloads: WorkloadSummary[];
+  confidence: ConfidenceResult;
   totals: {
     cpuCores: number;
     memoryGiB: number;
