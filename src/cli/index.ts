@@ -10,7 +10,7 @@ import { fetchClusterYaml } from './kubectl';
 import { checkPolicy } from './policy';
 import { readYamlInput, runEstimate } from './run-estimate';
 
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 const PROVIDERS = new Set<ProviderId>(['aws', 'gcp', 'azure', 'hetzner']);
 
 function printHelp(): void {
