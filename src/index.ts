@@ -7,4 +7,12 @@ export { assessConfidence } from './pricing/confidence';
 export { collectWarnings } from './warnings/index';
 export { loadPriceSheets, loadPriceSheet, listAvailableSheets } from './pricing/load-sheets';
 export { runEstimate, readYamlInput } from './cli/run-estimate';
-export { formatEstimateMarkdown, formatEstimateText, formatEstimateJson, PR_COMMENT_MARKER } from './cli/format';
+export {
+  formatEstimateMarkdown,
+  formatEstimateText,
+  formatEstimateJson,
+  PR_COMMENT_MARKER,
+} from './cli/format';
+export { computeEstimateDiff } from './cli/diff';
+export { checkPolicy } from './cli/policy';
+export { renderHelmTemplate } from './cli/helm';

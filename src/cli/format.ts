@@ -1,4 +1,5 @@
 import { PROVIDER_LABELS } from '../estimator/index';
+import type { EstimateDiff } from './diff';
 import type { EstimateResult, MonthlyUsdRange, ProviderId } from '../types';
 
 function fmtUsd(n: number): string {
@@ -18,7 +19,44 @@ function pad(str: string, width: number): string {
   return str.length >= width ? str : str + ' '.repeat(width - str.length);
 }
 
-export function formatEstimateText(result: EstimateResult): string {
+function fmtDelta(n: number): string {
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${fmtUsd(n)}`;
+}
+
+function appendDiffText(lines: string[], diff: EstimateDiff): void {
+  lines.push('Cost change vs base (USD/mo):');
+  lines.push('');
+  const header = `${pad('Provider', 16)}  ${pad('Before', 14)}  ${pad('After', 14)}  Change (max)`;
+  lines.push(header);
+  lines.push('-'.repeat(header.length + 4));
+  for (const d of diff.byProvider) {
+    const label = PROVIDER_LABELS[d.provider];
+    lines.push(
+      `${pad(label, 16)}  ${pad(fmtRange(d.before), 14)}  ${pad(fmtRange(d.after), 14)}  ${fmtDelta(d.deltaMax)}`,
+    );
+  }
+  lines.push('');
+}
+
+function appendDiffMarkdown(lines: string[], diff: EstimateDiff): void {
+  lines.push('### Cost change vs base (USD/mo)');
+  lines.push('');
+  lines.push('| Provider | Before | After | Change (max) |');
+  lines.push('|----------|--------|-------|--------------|');
+  for (const d of diff.byProvider) {
+    const label = PROVIDER_LABELS[d.provider];
+    lines.push(
+      `| ${label} | ${fmtRange(d.before)} | ${fmtRange(d.after)} | ${fmtDelta(d.deltaMax)} |`,
+    );
+  }
+  lines.push('');
+}
+
+export function formatEstimateText(
+  result: EstimateResult,
+  opts?: { diff?: EstimateDiff },
+): string {
   const lines: string[] = [];
 
   lines.push('');
@@ -31,6 +69,10 @@ export function formatEstimateText(result: EstimateResult): string {
   lines.push('');
   lines.push('Provider comparison (planning estimate, USD/mo):');
   lines.push('');
+
+  if (opts?.diff) {
+    appendDiffText(lines, opts.diff);
+  }
 
   const nameWidth = Math.max(
     ...result.providers.map((p) => PROVIDER_LABELS[p.provider].length),
@@ -98,7 +140,7 @@ const PR_COMMENT_MARKER = '<!-- podmonkey-cost-estimate -->';
 
 export function formatEstimateMarkdown(
   result: EstimateResult,
-  opts?: { path?: string },
+  opts?: { path?: string; diff?: EstimateDiff },
 ): string {
   const lines: string[] = [PR_COMMENT_MARKER, ''];
 
@@ -114,6 +156,11 @@ export function formatEstimateMarkdown(
     `**Resources:** ${result.totals.cpuCores.toFixed(2)} CPU cores · ${result.totals.memoryGiB.toFixed(2)} GiB memory · ${result.totals.storageGiB.toFixed(1)} GiB storage · ${result.totals.loadBalancerCount} load balancer(s)`,
   );
   lines.push('');
+
+  if (opts?.diff) {
+    appendDiffMarkdown(lines, opts.diff);
+  }
+
   lines.push('### Provider comparison (USD/mo, planning estimate)');
   lines.push('');
   lines.push('| Provider | Region | Total/mo |');

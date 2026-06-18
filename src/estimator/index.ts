@@ -64,9 +64,9 @@ function computeCostRange(
   memoryGiB: number,
   sheet: PriceSheet,
   minNodes: number,
-): { min: number; max: number; nodes: number } {
+): { min: number; max: number; nodes: number; instanceType: string } {
   const marginal = computeMarginalMonthly(cpuCores, memoryGiB, sheet);
-  const { nodes, monthlyUsd: nodeFloor } = computeNodeFloorMonthly(
+  const { nodes, monthlyUsd: nodeFloor, instanceType } = computeNodeFloorMonthly(
     cpuCores,
     memoryGiB,
     sheet,
@@ -74,13 +74,14 @@ function computeCostRange(
   );
 
   if (sheet.compute_model === 'node_only') {
-    return { min: nodeFloor, max: nodeFloor, nodes };
+    return { min: nodeFloor, max: nodeFloor, nodes, instanceType };
   }
 
   return {
     min: Math.min(marginal, nodeFloor),
     max: Math.max(marginal, nodeFloor),
     nodes,
+    instanceType,
   };
 }
 
@@ -118,6 +119,7 @@ export function estimateForProvider(
   const minNodes = options.minNodes ?? 1;
 
   const compute = computeCostRange(cpuCores, memoryGiB, sheet, minNodes);
+  const nodeInstance = compute.instanceType;
 
   const storageCost = storageCostMonthly(parse, sheet);
 
@@ -132,8 +134,8 @@ export function estimateForProvider(
 
   const computeLabel =
     sheet.compute_model === 'node_only'
-      ? `Compute (nodes × ${sheet.reference_instance.type})`
-      : `Compute (requests .. ${compute.nodes}× ${sheet.reference_instance.type})`;
+      ? `Compute (nodes × ${nodeInstance})`
+      : `Compute (requests .. ${compute.nodes}× ${nodeInstance})`;
 
   const lineItems: CostLineItem[] = [
     {
@@ -173,6 +175,7 @@ export function estimateForProvider(
       max: compute.max,
     },
     nodeCount: compute.nodes,
+    nodeInstanceType: nodeInstance,
     lineItems,
   };
 }

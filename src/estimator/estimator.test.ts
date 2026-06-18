@@ -64,26 +64,27 @@ describe('units', () => {
 });
 
 describe('estimator', () => {
-  it('nginx on EKS: marginal ~$30, node floor ~$70, overhead $73', () => {
+  it('nginx on EKS: marginal ~$30, node floor ~$30 (catalog fit)', () => {
     const parsed = parseManifests(nginxYaml, defaults);
     const result = estimate(parsed, [awsSheet]);
     const provider = result.providers[0];
 
     expect(provider.computeMonthlyUsdRange.min).toBeCloseTo(30.11, 0);
-    expect(provider.computeMonthlyUsdRange.max).toBeCloseTo(70.08, 0);
+    expect(provider.computeMonthlyUsdRange.max).toBeCloseTo(30.37, 0);
     expect(provider.lineItems.find((i) => i.category === 'control_plane')?.monthlyUsd).toBe(73);
     expect(provider.totalMonthlyUsdRange.min).toBeCloseTo(103.11, 0);
-    expect(provider.totalMonthlyUsdRange.max).toBeCloseTo(143.08, 0);
+    expect(provider.totalMonthlyUsdRange.max).toBeCloseTo(103.37, 0);
     expect(provider.nodeCount).toBe(1);
+    expect(provider.nodeInstanceType).toBe('t3.medium');
   });
 
-  it('nginx + LB on EKS: total range ~$121–$161', () => {
+  it('nginx + LB on EKS: total range ~$121–$121', () => {
     const parsed = parseManifests(nginxWithLbYaml, defaults);
     const result = estimate(parsed, [awsSheet]);
     const provider = result.providers[0];
 
     expect(provider.totalMonthlyUsdRange.min).toBeCloseTo(121.11, 0);
-    expect(provider.totalMonthlyUsdRange.max).toBeCloseTo(161.08, 0);
+    expect(provider.totalMonthlyUsdRange.max).toBeCloseTo(121.37, 0);
   });
 
   it('counts load balancers', () => {
@@ -111,7 +112,7 @@ spec:
 
     expect(result.workloads).toHaveLength(1);
     expect(result.workloads[0].computeMonthlyUsdRange.aws?.min).toBeCloseTo(30.11, 0);
-    expect(result.workloads[0].computeMonthlyUsdRange.aws?.max).toBeCloseTo(70.08, 0);
+    expect(result.workloads[0].computeMonthlyUsdRange.aws?.max).toBeCloseTo(30.37, 0);
   });
 
   it('assigns high confidence when requests are set', () => {
@@ -151,12 +152,12 @@ spec:
     const storageItem = provider.lineItems.find((i) => i.category === 'storage');
     expect(storageItem?.monthlyUsd).toBe(2.4);
 
-    // Compute: 0.75 vCPU, 0.75 GiB across 3 pods
+    // Compute: 0.75 vCPU, 0.75 GiB across 3 pods — fits one t3.medium
     expect(provider.computeMonthlyUsdRange.min).toBeCloseTo(15.02, 0);
-    expect(provider.computeMonthlyUsdRange.max).toBeCloseTo(70.08, 0);
+    expect(provider.computeMonthlyUsdRange.max).toBeCloseTo(30.37, 0);
 
     // Total includes $73 EKS control plane
     expect(provider.totalMonthlyUsdRange.min).toBeCloseTo(90.42, 0);
-    expect(provider.totalMonthlyUsdRange.max).toBeCloseTo(145.48, 0);
+    expect(provider.totalMonthlyUsdRange.max).toBeCloseTo(105.77, 0);
   });
 });

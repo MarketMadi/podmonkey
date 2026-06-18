@@ -16,7 +16,7 @@ describe('CLI runEstimate', () => {
 
     expect(result.providers).toHaveLength(1);
     expect(result.providers[0].totalMonthlyUsdRange.min).toBeCloseTo(121.11, 0);
-    expect(result.providers[0].totalMonthlyUsdRange.max).toBeCloseTo(161.08, 0);
+    expect(result.providers[0].totalMonthlyUsdRange.max).toBeCloseTo(121.37, 0);
   });
 
   it('loads all four default providers', () => {

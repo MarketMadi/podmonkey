@@ -21,6 +21,12 @@
     "hourly_usd": 0.067,
     "notes": "On-demand us-central1 approximate"
   },
+  "instance_catalog": [
+    { "type": "e2-medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.034 },
+    { "type": "e2-standard-2", "vcpu": 2, "memory_gib": 8, "hourly_usd": 0.067 },
+    { "type": "e2-standard-4", "vcpu": 4, "memory_gib": 16, "hourly_usd": 0.134 },
+    { "type": "e2-standard-8", "vcpu": 8, "memory_gib": 32, "hourly_usd": 0.268 }
+  ],
   "rates": {
     "cpu_per_vcpu_hour_usd": 0.0291,
     "memory_per_gib_hour_usd": 0.0036,

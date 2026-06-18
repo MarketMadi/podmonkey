@@ -5,6 +5,7 @@ import {
   deriveRatesFromReference,
   ratesNormalizeToReference,
 } from './derive-rates';
+import { cheapestNodeFloor } from './instance-catalog';
 import { computeNodeFloorMonthly } from './node-floor';
 import type { PriceSheet } from '../types';
 
@@ -40,9 +41,20 @@ describe('deriveRatesFromReference', () => {
 describe('computeNodeFloorMonthly', () => {
   const aws = sheets.find((s) => s.provider === 'aws')!;
 
-  it('fits nginx workload on one m6i.large', () => {
-    const { nodes, monthlyUsd } = computeNodeFloorMonthly(1.5, 1.5, aws);
+  it('fits nginx workload on one t3.medium via catalog', () => {
+    const { nodes, monthlyUsd, instanceType } = computeNodeFloorMonthly(
+      1.5,
+      1.5,
+      aws,
+    );
     expect(nodes).toBe(1);
-    expect(monthlyUsd).toBeCloseTo(70.08, 0);
+    expect(instanceType).toBe('t3.medium');
+    expect(monthlyUsd).toBeCloseTo(30.37, 0);
+  });
+
+  it('picks cheaper catalog VM for small workloads', () => {
+    const floor = cheapestNodeFloor(1.5, 1.5, aws);
+    expect(floor.instanceType).toBe('t3.medium');
+    expect(floor.monthlyUsd).toBeLessThan(40);
   });
 });

@@ -1,5 +1,5 @@
 import type { PriceSheet } from '../types';
-import { roundUsd } from '../units';
+import { cheapestNodeFloor } from './instance-catalog';
 
 export function nodesNeeded(
   totalCpu: number,
@@ -20,11 +20,6 @@ export function computeNodeFloorMonthly(
   totalMemGiB: number,
   sheet: PriceSheet,
   minNodes = 1,
-): { nodes: number; monthlyUsd: number } {
-  const inst = sheet.reference_instance;
-  const nodes = nodesNeeded(totalCpu, totalMemGiB, inst, minNodes);
-  const monthlyUsd = roundUsd(
-    nodes * inst.hourly_usd * sheet.hours_per_month,
-  );
-  return { nodes, monthlyUsd };
+): { nodes: number; monthlyUsd: number; instanceType: string } {
+  return cheapestNodeFloor(totalCpu, totalMemGiB, sheet, minNodes);
 }

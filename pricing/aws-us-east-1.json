@@ -21,6 +21,12 @@
     "hourly_usd": 0.096,
     "notes": "Linux on-demand us-east-1; verify at publish time"
   },
+  "instance_catalog": [
+    { "type": "t3.medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0416 },
+    { "type": "m6i.large", "vcpu": 2, "memory_gib": 8, "hourly_usd": 0.096 },
+    { "type": "m6i.xlarge", "vcpu": 4, "memory_gib": 16, "hourly_usd": 0.192 },
+    { "type": "m6i.2xlarge", "vcpu": 8, "memory_gib": 32, "hourly_usd": 0.384 }
+  ],
   "rates": {
     "cpu_per_vcpu_hour_usd": 0.0416,
     "memory_per_gib_hour_usd": 0.0052,

@@ -62,6 +62,13 @@ export interface PriceSheet {
     hourly_usd: number;
     notes?: string;
   };
+  /** Smallest/common VMs for node-floor bin-packing (cheapest fit wins). */
+  instance_catalog?: Array<{
+    type: string;
+    vcpu: number;
+    memory_gib: number;
+    hourly_usd: number;
+  }>;
   rates: {
     cpu_per_vcpu_hour_usd: number;
     memory_per_gib_hour_usd: number;
@@ -103,6 +110,8 @@ export interface ProviderEstimate {
   totalMonthlyUsdRange: MonthlyUsdRange;
   computeMonthlyUsdRange: MonthlyUsdRange;
   nodeCount: number;
+  /** VM type selected for node-floor compute (from catalog). */
+  nodeInstanceType: string;
   lineItems: CostLineItem[];
 }
 

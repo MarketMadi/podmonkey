@@ -20,6 +20,12 @@
     "hourly_usd": 0.0118,
     "notes": "CX32 ~€7.59/mo → hourly equivalent"
   },
+  "instance_catalog": [
+    { "type": "cx22", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0077 },
+    { "type": "cx32", "vcpu": 4, "memory_gib": 8, "hourly_usd": 0.0118 },
+    { "type": "cx42", "vcpu": 8, "memory_gib": 16, "hourly_usd": 0.0224 },
+    { "type": "cx52", "vcpu": 16, "memory_gib": 32, "hourly_usd": 0.0448 }
+  ],
   "rates": {
     "cpu_per_vcpu_hour_usd": 0.0051,
     "memory_per_gib_hour_usd": 0.0026,

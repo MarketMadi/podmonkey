@@ -21,6 +21,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cost estimate
-        uses: MarketMadi/podmonkey@v0.1.0
+        uses: MarketMadi/podmonkey@v0.2.0
         with:
           path: ./k8s
+          max-monthly-usd: '1000'
+          min-confidence: '50'

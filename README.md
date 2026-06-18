@@ -15,7 +15,8 @@ Podmonkey is an open-source, manifest-first Kubernetes cost estimator. It parses
 | [Product spec](docs/PRODUCT.md) | Vision, scope, roadmap, warnings |
 | [Methodology](docs/METHODOLOGY.md) | Formulas, price sheet schema |
 | [Competitors](docs/COMPETITORS.md) | Side-by-side vs Kubecost, ReleaseRun, Optiqor, etc. |
-| [GitHub Action](docs/GITHUB_ACTION.md) | PR cost comments in CI |
+| [GitHub Action](docs/GITHUB_ACTION.md) | PR cost comments, diff, policy gates in CI |
+| [Roadmap](docs/ROADMAP.md) | Tier 2+ feature plan |
 
 ## Try it
 
@@ -37,12 +38,36 @@ Deploy your own copy: [Vercel](https://vercel.com/new/clone?repository-url=https
 Copy [`.github/workflows/podmonkey-estimate.example.yml`](.github/workflows/podmonkey-estimate.example.yml) to `.github/workflows/podmonkey.yml` and point `path` at your manifests:
 
 ```yaml
-- uses: MarketMadi/podmonkey@v0.1.0
+- uses: MarketMadi/podmonkey@v0.2.0
   with:
     path: ./k8s
+    base-path: ./k8s   # optional: compare vs main branch copy for PR diff
+    max-monthly-usd: '500'
+    min-confidence: '60'
 ```
 
-Podmonkey posts (or updates) a PR comment with per-provider monthly ranges. See [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md).
+Podmonkey posts (or updates) a PR comment with per-provider monthly ranges and optional cost diff. See [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md).
+
+## Install (CLI)
+
+```bash
+npm install -g podmonkey
+# or without installing:
+npx podmonkey estimate -f examples/nginx-deployment.yaml
+```
+
+**Helm charts:**
+
+```bash
+podmonkey estimate --helm-chart ./chart --helm-values values.yaml
+helm template myapp ./chart | podmonkey estimate -f -
+```
+
+**PR cost diff:**
+
+```bash
+podmonkey estimate -f k8s/ --base k8s.main/ --markdown
+```
 
 ## How it works
 
@@ -59,14 +84,14 @@ YAML manifests
 
 ```
 Model A (marginal):  Σ(requests) × 730h × derived $/vcpu-hr and $/gib-hr
-Model B (node floor): ceil(workload / VM size) × reference_instance hourly × 730h
+Model B (node floor): cheapest catalog VM that fits workload × hourly × 730h
 ```
 
 Plus control plane, PVC storage ($/GiB-month), and LoadBalancer flat fees per provider.
 
 Rates are **derived at runtime** from each sheet's `reference_instance` — not the legacy `rates` fields in JSON.
 
-**Example (nginx on AWS EKS):** ~$103–$143/mo without a LoadBalancer; ~$121–$161/mo with one.
+**Example (nginx on AWS EKS):** ~$103/mo without a LoadBalancer; ~$121/mo with one (on-demand, planning estimate).
 
 ## Project structure
 
@@ -86,21 +111,19 @@ podmonkey/
 ## Development
 
 ```bash
-# Root: shared engine tests (22 golden + unit tests)
+# Root: shared engine tests (27 tests)
 npm install
 npm test
 npm run build
 
-# CLI
+# CLI (also: npm install -g podmonkey)
 npm run podmonkey -- estimate -f examples/nginx-deployment.yaml
-# or after build:
+npm run podmonkey -- estimate -f k8s/ --base k8s.main/ --max-monthly-increase-usd 50
 npx podmonkey estimate -f examples/nginx-deployment.yaml
 kubectl get deploy,svc -o yaml | npx podmonkey estimate -f - --json
 
-# GitHub Action (PR comments) — see docs/GITHUB_ACTION.md
-# uses: MarketMadi/podmonkey@v0.1.0
-#   with:
-#     path: ./k8s
+# GitHub Action (PR comments + policy gates) — see docs/GITHUB_ACTION.md
+# uses: MarketMadi/podmonkey@v0.2.0
 
 # Web app
 cd apps/web && npm install && npm run dev

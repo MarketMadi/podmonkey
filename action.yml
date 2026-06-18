@@ -8,6 +8,10 @@ inputs:
   path:
     description: Path to a YAML file or directory of manifests (relative to the workflow workspace)
     required: true
+  base-path:
+    description: Base branch manifests for cost diff (file or directory). Omit to skip diff.
+    required: false
+    default: ''
   github-token:
     description: Token used to create or update PR comments
     default: ${{ github.token }}
@@ -16,6 +20,18 @@ inputs:
     default: 'true'
   providers:
     description: Comma-separated provider ids (aws,gcp,azure,hetzner). Leave empty for all four.
+    required: false
+    default: ''
+  max-monthly-usd:
+    description: Fail the step if any provider max monthly total exceeds this (USD). Empty = no limit.
+    required: false
+    default: ''
+  min-confidence:
+    description: Fail the step if manifest confidence score is below this (0–100). Empty = no limit.
+    required: false
+    default: ''
+  max-monthly-increase-usd:
+    description: Fail when max monthly increase vs base-path exceeds this (USD). Requires base-path.
     required: false
     default: ''
 
@@ -51,7 +67,11 @@ runs:
       env:
         PODMONKEY_CLI: ${{ github.action_path }}/dist/cli/index.js
         INPUT_PATH: ${{ inputs.path }}
+        INPUT_BASE_PATH: ${{ inputs.base-path }}
         INPUT_PROVIDERS: ${{ inputs.providers }}
+        INPUT_MAX_MONTHLY_USD: ${{ inputs.max-monthly-usd }}
+        INPUT_MIN_CONFIDENCE: ${{ inputs.min-confidence }}
+        INPUT_MAX_INCREASE: ${{ inputs.max-monthly-increase-usd }}
       run: |
         set -euo pipefail
         JSON_FILE="${RUNNER_TEMP}/podmonkey.json"
@@ -64,10 +84,34 @@ runs:
             [ -n "$p_trimmed" ] && PROVIDER_ARGS+=(--provider "$p_trimmed")
           done
         fi
-        node "$PODMONKEY_CLI" estimate -f "$INPUT_PATH" "${PROVIDER_ARGS[@]}" --json > "$JSON_FILE"
-        node "$PODMONKEY_CLI" estimate -f "$INPUT_PATH" "${PROVIDER_ARGS[@]}" --markdown > "$MD_FILE"
+        BASE_ARGS=()
+        if [ -n "${INPUT_BASE_PATH}" ]; then
+          BASE_ARGS=(--base "${INPUT_BASE_PATH}")
+        fi
+        POLICY_ARGS=()
+        if [ -n "${INPUT_MAX_MONTHLY_USD}" ]; then
+          POLICY_ARGS+=(--max-monthly-usd "${INPUT_MAX_MONTHLY_USD}")
+        fi
+        if [ -n "${INPUT_MIN_CONFIDENCE}" ]; then
+          POLICY_ARGS+=(--min-confidence "${INPUT_MIN_CONFIDENCE}")
+        fi
+        if [ -n "${INPUT_MAX_INCREASE}" ]; then
+          POLICY_ARGS+=(--max-monthly-increase-usd "${INPUT_MAX_INCREASE}")
+        fi
+        set +e
+        node "$PODMONKEY_CLI" estimate -f "$INPUT_PATH" "${PROVIDER_ARGS[@]}" "${BASE_ARGS[@]}" "${POLICY_ARGS[@]}" --json > "$JSON_FILE"
+        EST_EXIT=$?
+        node "$PODMONKEY_CLI" estimate -f "$INPUT_PATH" "${PROVIDER_ARGS[@]}" "${BASE_ARGS[@]}" --markdown > "$MD_FILE"
+        set -e
         echo "json_path=${JSON_FILE}" >> "$GITHUB_OUTPUT"
         echo "markdown_path=${MD_FILE}" >> "$GITHUB_OUTPUT"
+        if [ "$EST_EXIT" -eq 2 ]; then
+          echo "::error::Podmonkey policy check failed (see PR comment or json output)"
+          exit 2
+        fi
+        if [ "$EST_EXIT" -ne 0 ]; then
+          exit "$EST_EXIT"
+        fi
 
     - name: Comment on pull request
       if: github.event_name == 'pull_request' && inputs.comment-on-pr == 'true'

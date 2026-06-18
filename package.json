@@ -1,18 +1,47 @@
 {
   "name": "podmonkey",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Paste Kubernetes YAML. Compare cloud bills.",
+  "version": "0.2.0",
+  "description": "Paste Kubernetes YAML. Compare cloud bills across AWS, GCP, Azure, and Hetzner.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarketMadi/podmonkey.git"
+  },
+  "homepage": "https://marketmadi.github.io/podmonkey/",
+  "bugs": {
+    "url": "https://github.com/MarketMadi/podmonkey/issues"
+  },
+  "keywords": [
+    "kubernetes",
+    "k8s",
+    "cost",
+    "finops",
+    "eks",
+    "gke",
+    "aks",
+    "hetzner",
+    "devops",
+    "github-actions"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "podmonkey": "./dist/cli/index.js"
   },
+  "files": [
+    "dist",
+    "pricing",
+    "README.md",
+    "LICENSE"
+  ],
   "workspaces": [
     "apps/*"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && esbuild src/cli/index.ts --bundle --platform=node --packages=external --format=esm --outfile=dist/cli/index.js --banner:js='#!/usr/bin/env node'",
+    "prepublishOnly": "npm run build",
     "podmonkey": "npm run build && node dist/cli/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
