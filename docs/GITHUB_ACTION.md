@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cost estimate
-        uses: MarketMadi/podmonkey@v0.2.0
+        uses: MarketMadi/podmonkey@v0.3.1
         with:
           path: ./k8s
 ```
@@ -35,7 +35,7 @@ jobs:
 ## Policy gates (fail the job)
 
 ```yaml
-- uses: MarketMadi/podmonkey@v0.2.0
+- uses: MarketMadi/podmonkey@v0.3.1
   with:
     path: ./k8s
     max-monthly-usd: '500'
@@ -56,7 +56,7 @@ Compare PR manifests against a base copy (e.g. main branch layout):
 
 - uses: actions/checkout@v4
 
-- uses: MarketMadi/podmonkey@v0.2.0
+- uses: MarketMadi/podmonkey@v0.3.1
   with:
     path: ./k8s
     base-path: ./base/k8s
