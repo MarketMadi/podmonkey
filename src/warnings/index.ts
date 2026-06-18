@@ -72,5 +72,13 @@ export function collectWarnings(parse: ParseResult): Warning[] {
     });
   }
 
+  if (parse.ingresses.length > 0) {
+    warnings.push({
+      id: 'INGRESS_COUNT',
+      severity: 'info',
+      message: `${parse.ingresses.length} Ingress resource(s) may add LB/controller fees on cloud providers.`,
+    });
+  }
+
   return warnings;
 }

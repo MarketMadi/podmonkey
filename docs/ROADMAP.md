@@ -11,35 +11,36 @@
 - GitHub Action (PR comments)
 - Example manifest gallery
 
-## Shipped — v0.2.0 (Tier 2)
+## Shipped — v0.2.0
 
-- **`npx podmonkey`** — npm package (`podmonkey` on npm)
+- **`npx podmonkey`** — npm package (run `npm publish --access public` to release)
 - **`--base` PR diff** — compare manifests vs base branch copy
 - **Helm input** — `--helm-chart` or `helm template | podmonkey estimate -f -`
-- **Policy gates** — `--max-monthly-usd`, `--min-confidence`, `--max-monthly-increase-usd` (exit 2)
+- **Policy gates** — `--max-monthly-usd`, `--min-confidence`, `--max-monthly-increase-usd`
 - **Action policy inputs** — same gates in `action.yml`
 - **Instance catalog** — node floor picks cheapest fitting VM per provider
 
-## Tier 3 — accuracy + workflow
+## Shipped — v0.3.0 (Tier 3)
 
-- Region / tier toggles in web UI
-- CronJob real schedule → runs/month
-- Storage class → rate mapping (all classes)
-- Ingress cost (rough)
-- `kubectl get … -o yaml` helper flag
-- Export / shareable estimate links
-- `estimate --diff` JSON schema stability for CI integrators
+- **Verified pricing** — refreshed sheets, [PRICING_SOURCES.md](./PRICING_SOURCES.md), benchmark tests
+- **CronJob schedules** — real runs/month via `cron-parser` (not `× 30` guess)
+- **Storage class mapping** — gp2/io2, `premium-rwo`, managed disks, etc.
+- **Ingress costing** — LB-backed ingress fees per provider
+- **`--from-cluster`** — `kubectl get … -o yaml` input
+- **Web UI toggles** — GKE free tier, AKS tier, DaemonSet node count
+- **Export** — copy markdown, shareable URL hash
 
 ## Tier 4 — optional / monetization
 
 - Calibrate mode (OpenCost / Kubecost effective rates)
 - Custom enterprise price books
 - Spot / reserved discount slider
+- Region picker (multi-region sheets)
 - Team dashboard, saved projects
-- ArgoCD / Flux pre-sync hook
 
-## Build order rationale
+## Manual checklist (Tier 2 npm)
 
-1. **Distribution** (npm, Action) before cluster features — matches Infracost playbook
-2. **Diff + policy** before calibrate — static YAML value prop for small teams
-3. **Helm** before raw HPA simulation — matches how manifests are stored in git
+```bash
+npm login
+npm publish --access public
+```

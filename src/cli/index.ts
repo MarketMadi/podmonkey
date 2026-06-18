@@ -6,10 +6,11 @@ import {
   formatEstimateText,
 } from './format';
 import { renderHelmTemplate } from './helm';
+import { fetchClusterYaml } from './kubectl';
 import { checkPolicy } from './policy';
 import { readYamlInput, runEstimate } from './run-estimate';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 const PROVIDERS = new Set<ProviderId>(['aws', 'gcp', 'azure', 'hetzner']);
 
 function printHelp(): void {
@@ -33,7 +34,10 @@ Options:
   --provider <id>                Limit to aws|gcp|azure|hetzner; repeatable
   --aks-tier <tier>              AKS control plane: free (default) or standard
   --no-gke-free                  Charge GKE control plane (disable free zonal tier)
-  --min-nodes <n>                Minimum nodes for node-floor model (default: 1)
+  --from-cluster                 Read manifests from kubectl (cluster must be configured)
+  --kubectl-resources <types>    kubectl resource list (default: deploy,sts,ds,svc,pvc,cronjob,job,ingress)
+  --kubectl-namespace <ns>         kubectl namespace (default: all namespaces)
+  --daemonset-nodes <n>            Assumed nodes for DaemonSet costing (default: 3)
   --max-monthly-usd <n>          Fail (exit 2) if any provider max total exceeds n
   --min-confidence <n>           Fail (exit 2) if confidence score is below n
   --max-monthly-increase-usd <n> Fail (exit 2) if increase vs --base exceeds n
@@ -45,6 +49,7 @@ Examples:
   podmonkey estimate -f k8s/ --base k8s.main/ --markdown
   helm template myapp ./chart | podmonkey estimate -f -
   podmonkey estimate --helm-chart ./chart --helm-values values.yaml
+  podmonkey estimate --from-cluster --provider aws
   podmonkey estimate -f app.yaml --max-monthly-usd 500 --min-confidence 60
 `);
 }
@@ -90,6 +95,9 @@ function estimateOptions(values: Record<string, unknown>) {
     gkeFreeTier: !values['no-gke-free'],
     aksTier: (aksTier as 'free' | 'standard') ?? 'free',
     minNodes,
+    daemonsetNodeCount: values['daemonset-nodes']
+      ? Number.parseInt(values['daemonset-nodes'] as string, 10)
+      : undefined,
   };
 }
 
@@ -103,6 +111,10 @@ function estimateCommand(args: string[]): number {
       'helm-release': { type: 'string' },
       'helm-namespace': { type: 'string' },
       'helm-values': { type: 'string', multiple: true },
+      'from-cluster': { type: 'boolean', default: false },
+      'kubectl-resources': { type: 'string' },
+      'kubectl-namespace': { type: 'string' },
+      'daemonset-nodes': { type: 'string' },
       json: { type: 'boolean', default: false },
       markdown: { type: 'boolean', default: false },
       provider: { type: 'string', multiple: true },
@@ -127,8 +139,10 @@ function estimateCommand(args: string[]): number {
     return 1;
   }
 
-  if (!values.file && !values['helm-chart']) {
-    process.stderr.write('Error: --file (-f) or --helm-chart is required\n\n');
+  if (!values.file && !values['helm-chart'] && !values['from-cluster']) {
+    process.stderr.write(
+      'Error: --file (-f), --helm-chart, or --from-cluster is required\n\n',
+    );
     printHelp();
     return 1;
   }
@@ -161,7 +175,12 @@ function estimateCommand(args: string[]): number {
 
   let yaml: string;
   try {
-    if (values['helm-chart']) {
+    if (values['from-cluster']) {
+      yaml = fetchClusterYaml({
+        resources: values['kubectl-resources'],
+        namespace: values['kubectl-namespace'],
+      });
+    } else if (values['helm-chart']) {
       yaml = renderHelmTemplate({
         chart: values['helm-chart'],
         release: values['helm-release'],
@@ -205,7 +224,12 @@ function estimateCommand(args: string[]): number {
       }
     }
 
-    const formatOpts = { diff, path: values.file ?? values['helm-chart'] };
+    const formatOpts = {
+      diff,
+      path: values['from-cluster']
+        ? 'cluster'
+        : (values.file ?? values['helm-chart']),
+    };
 
     if (values.json) {
       const payload = diff ? { ...result, diff } : result;

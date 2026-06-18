@@ -1,6 +1,6 @@
 {
   "name": "podmonkey",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Paste Kubernetes YAML. Compare cloud bills across AWS, GCP, Azure, and Hetzner.",
   "license": "MIT",
   "type": "module",
@@ -48,6 +48,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "cron-parser": "^5.0.6",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {

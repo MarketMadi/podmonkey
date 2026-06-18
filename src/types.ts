@@ -35,10 +35,17 @@ export interface ParsedService {
   type: string;
 }
 
+export interface ParsedIngress {
+  name: string;
+  namespace: string;
+  ingressClass?: string;
+}
+
 export interface ParseResult {
   workloads: ParsedWorkload[];
   pvcs: ParsedPVC[];
   services: ParsedService[];
+  ingresses: ParsedIngress[];
 }
 
 export interface PriceSheet {
@@ -79,6 +86,8 @@ export interface PriceSheet {
     default_class?: string;
   };
   load_balancer_monthly_usd: number;
+  /** Monthly fee per Ingress (cloud LB controller); 0 when not billed separately. */
+  ingress_lb_monthly_usd?: number;
   /** Hetzner bills whole VPS instances — use node floor only for compute. */
   compute_model?: 'marginal_and_node' | 'node_only';
   defaults: {
@@ -94,7 +103,7 @@ export interface MonthlyUsdRange {
 }
 
 export interface CostLineItem {
-  category: 'compute' | 'storage' | 'load_balancer' | 'control_plane';
+  category: 'compute' | 'storage' | 'load_balancer' | 'ingress' | 'control_plane';
   label: string;
   monthlyUsd: number;
   /** Set when min ≠ max (e.g. compute marginal vs node floor). */
@@ -165,5 +174,6 @@ export interface EstimateResult {
     memoryGiB: number;
     storageGiB: number;
     loadBalancerCount: number;
+    ingressCount: number;
   };
 }

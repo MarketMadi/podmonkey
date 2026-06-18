@@ -2,26 +2,28 @@
   "provider": "aws",
   "service": "eks",
   "region": "us-east-1",
-  "as_of": "2026-06-15",
+  "as_of": "2026-06-18",
   "sources": [
     "https://aws.amazon.com/eks/pricing/",
     "https://aws.amazon.com/ec2/pricing/on-demand/",
-    "https://aws.amazon.com/ebs/pricing/"
+    "https://aws.amazon.com/ebs/pricing/",
+    "https://aws.amazon.com/elasticloadbalancing/pricing/"
   ],
   "hours_per_month": 730,
   "control_plane": {
     "hourly_usd": 0.1,
     "tier": "standard",
-    "notes": "EKS standard support; extended support is $0.60/hr"
+    "notes": "EKS standard support $0.10/hr; extended support $0.60/hr after version EOL"
   },
   "reference_instance": {
     "type": "m6i.large",
     "vcpu": 2,
     "memory_gib": 8,
     "hourly_usd": 0.096,
-    "notes": "Linux on-demand us-east-1; verify at publish time"
+    "notes": "Linux on-demand us-east-1"
   },
   "instance_catalog": [
+    { "type": "t4g.medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0336 },
     { "type": "t3.medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0416 },
     { "type": "m6i.large", "vcpu": 2, "memory_gib": 8, "hourly_usd": 0.096 },
     { "type": "m6i.xlarge", "vcpu": 4, "memory_gib": 16, "hourly_usd": 0.192 },
@@ -35,10 +37,15 @@
   },
   "storage": {
     "gp3_per_gib_month_usd": 0.08,
+    "gp2_per_gib_month_usd": 0.1,
+    "io1_per_gib_month_usd": 0.125,
     "io2_per_gib_month_usd": 0.125,
+    "st1_per_gib_month_usd": 0.045,
+    "sc1_per_gib_month_usd": 0.015,
     "default_class": "gp3"
   },
   "load_balancer_monthly_usd": 18.0,
+  "ingress_lb_monthly_usd": 18.0,
   "defaults": {
     "missing_cpu": "100m",
     "missing_memory": "128Mi",

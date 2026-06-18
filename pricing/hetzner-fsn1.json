@@ -2,23 +2,24 @@
   "provider": "hetzner",
   "service": "k3s",
   "region": "fsn1",
-  "as_of": "2026-06-15",
+  "as_of": "2026-06-18",
   "sources": [
     "https://www.hetzner.com/cloud",
+    "https://docs.hetzner.com/cloud/servers/overview/",
     "https://www.hetzner.com/cloud/load-balancer"
   ],
   "hours_per_month": 730,
   "control_plane": {
     "hourly_usd": 0,
     "tier": "self-managed",
-    "notes": "No managed K8s control plane fee; user runs k3s on VPS"
+    "notes": "Self-managed k3s; no managed control plane fee"
   },
   "reference_instance": {
     "type": "cx32",
     "vcpu": 4,
     "memory_gib": 8,
     "hourly_usd": 0.0118,
-    "notes": "CX32 ~€7.59/mo → hourly equivalent"
+    "notes": "CX32 shared vCPU fsn1"
   },
   "instance_catalog": [
     { "type": "cx22", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0077 },
@@ -36,6 +37,7 @@
     "default_class": "volume"
   },
   "load_balancer_monthly_usd": 5.9,
+  "ingress_lb_monthly_usd": 0,
   "compute_model": "node_only",
   "defaults": {
     "missing_cpu": "100m",

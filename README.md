@@ -16,7 +16,8 @@ Podmonkey is an open-source, manifest-first Kubernetes cost estimator. It parses
 | [Methodology](docs/METHODOLOGY.md) | Formulas, price sheet schema |
 | [Competitors](docs/COMPETITORS.md) | Side-by-side vs Kubecost, ReleaseRun, Optiqor, etc. |
 | [GitHub Action](docs/GITHUB_ACTION.md) | PR cost comments, diff, policy gates in CI |
-| [Roadmap](docs/ROADMAP.md) | Tier 2+ feature plan |
+| [Roadmap](docs/ROADMAP.md) | Tier 2–4 feature plan |
+| [Pricing sources](docs/PRICING_SOURCES.md) | Verified list prices and benchmarks |
 
 ## Try it
 
@@ -111,7 +112,7 @@ podmonkey/
 ## Development
 
 ```bash
-# Root: shared engine tests (27 tests)
+# Root: shared engine tests (41 tests)
 npm install
 npm test
 npm run build

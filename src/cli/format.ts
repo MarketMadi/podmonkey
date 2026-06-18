@@ -64,7 +64,7 @@ export function formatEstimateText(
     `Confidence: ${result.confidence.level} (${result.confidence.score}/100)`,
   );
   lines.push(
-    `Resources: ${result.totals.cpuCores.toFixed(2)} CPU cores · ${result.totals.memoryGiB.toFixed(2)} GiB memory · ${result.totals.storageGiB.toFixed(1)} GiB storage · ${result.totals.loadBalancerCount} LB(s)`,
+    `Resources: ${result.totals.cpuCores.toFixed(2)} CPU cores · ${result.totals.memoryGiB.toFixed(2)} GiB memory · ${result.totals.storageGiB.toFixed(1)} GiB storage · ${result.totals.loadBalancerCount} LB(s) · ${result.totals.ingressCount} ingress`,
   );
   lines.push('');
   lines.push('Provider comparison (planning estimate, USD/mo):');
@@ -153,7 +153,7 @@ export function formatEstimateMarkdown(
     `**Confidence:** ${result.confidence.level} (${result.confidence.score}/100)`,
   );
   lines.push(
-    `**Resources:** ${result.totals.cpuCores.toFixed(2)} CPU cores · ${result.totals.memoryGiB.toFixed(2)} GiB memory · ${result.totals.storageGiB.toFixed(1)} GiB storage · ${result.totals.loadBalancerCount} load balancer(s)`,
+    `**Resources:** ${result.totals.cpuCores.toFixed(2)} CPU cores · ${result.totals.memoryGiB.toFixed(2)} GiB memory · ${result.totals.storageGiB.toFixed(1)} GiB storage · ${result.totals.loadBalancerCount} load balancer(s) · ${result.totals.ingressCount} ingress`,
   );
   lines.push('');
 

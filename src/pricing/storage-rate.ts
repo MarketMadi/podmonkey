@@ -1,14 +1,33 @@
 import type { PriceSheet } from '../types';
 
+/**
+ * Maps Kubernetes storageClassName values to price sheet storage tier keys.
+ * Keys are normalized substrings (lowercase, no hyphens).
+ */
 const CLASS_ALIASES: Record<string, string[]> = {
-  gp3: ['gp3', 'gp2', 'standard', 'default'],
-  gp2: ['gp2', 'gp3'],
+  // AWS EBS
+  gp3: ['gp3', 'ebsgp3', 'ebs-sc', 'default'],
+  gp2: ['gp2', 'ebsgp2'],
+  io1: ['io1', 'io'],
   io2: ['io2', 'io1'],
-  'pd-ssd': ['pd-ssd', 'ssd', 'premium'],
-  'pd-standard': ['pd-standard', 'standard', 'hdd'],
-  'managed-premium': ['managed-premium', 'premium', 'premium-ssd'],
-  'managed-standard': ['managed-standard', 'standard', 'standardssd'],
-  volume: ['volume', 'hcloud-volumes'],
+  st1: ['st1', 'throughput'],
+  sc1: ['sc1', 'cold', 'hdd'],
+  // GCP PD
+  pd_ssd: ['pdssd', 'ssd', 'premium-rwo', 'premiumrwo'],
+  pd_balanced: ['pdbalanced', 'balanced', 'standard-rwo'],
+  pd_standard: ['pdstandard', 'standard', 'hdd'],
+  // Azure managed disks
+  managed_premium: [
+    'managedpremium',
+    'premium',
+    'premiumssd',
+    'managed-csi-premium',
+    'default',
+  ],
+  managed_standard: ['managedstandard', 'standardssd', 'managed-csi'],
+  azurefile: ['azurefile', 'file'],
+  // Hetzner
+  volume: ['volume', 'hcloudvolumes', 'hcloud-volumes', 'csi'],
 };
 
 function storageKeys(sheet: PriceSheet): string[] {
@@ -22,6 +41,32 @@ function rateForKey(sheet: PriceSheet, key: string): number | null {
   return typeof val === 'number' ? val : null;
 }
 
+function normalizeClass(name: string): string {
+  return name.toLowerCase().replace(/[_-]/g, '');
+}
+
+function matchStorageKey(
+  keys: string[],
+  storageClass: string,
+): string | null {
+  const normalized = normalizeClass(storageClass);
+
+  for (const key of keys) {
+    const prefix = key.replace(/_per_gib_month_usd$/, '');
+    const aliases = CLASS_ALIASES[prefix] ?? [prefix.replace(/_/g, '')];
+    if (aliases.some((a) => normalized.includes(a) || normalized === a)) {
+      return key;
+    }
+  }
+
+  for (const key of keys) {
+    const prefix = key.replace(/_per_gib_month_usd$/, '').replace(/_/g, '');
+    if (normalized.includes(prefix)) return key;
+  }
+
+  return null;
+}
+
 export function storageRateGiBMonth(
   sheet: PriceSheet,
   storageClass?: string,
@@ -29,37 +74,19 @@ export function storageRateGiBMonth(
   const keys = storageKeys(sheet);
 
   if (storageClass) {
-    const normalized = storageClass.toLowerCase();
-    for (const key of keys) {
-      const prefix = key.replace(/_per_gib_month_usd$/, '');
-      const aliases = CLASS_ALIASES[prefix] ?? [prefix];
-      if (aliases.some((a) => normalized.includes(a.replace(/-/g, '')) || normalized === a)) {
-        const rate = rateForKey(sheet, key);
-        if (rate !== null) return rate;
-      }
-    }
-    for (const key of keys) {
-      if (normalized.includes(key.replace(/_per_gib_month_usd$/, ''))) {
-        const rate = rateForKey(sheet, key);
-        if (rate !== null) return rate;
-      }
+    const matched = matchStorageKey(keys, storageClass);
+    if (matched) {
+      const rate = rateForKey(sheet, matched);
+      if (rate !== null) return rate;
     }
   }
 
   const defaultClass = sheet.storage.default_class;
   if (defaultClass) {
-    const match = keys.find((k) =>
-      k.startsWith(String(defaultClass).replace(/-/g, '_').replace(/-/g, '_')),
-    );
-    if (match) {
-      const rate = rateForKey(sheet, match);
+    const matched = matchStorageKey(keys, String(defaultClass));
+    if (matched) {
+      const rate = rateForKey(sheet, matched);
       if (rate !== null) return rate;
-    }
-    for (const key of keys) {
-      if (key.includes(String(defaultClass).replace(/-/g, '_'))) {
-        const rate = rateForKey(sheet, key);
-        if (rate !== null) return rate;
-      }
     }
   }
 
@@ -70,4 +97,14 @@ export function storageRateGiBMonth(
   }
 
   return 0.08;
+}
+
+/** Exposed for tests — resolve which tier key matched. */
+export function resolveStorageTierKey(
+  sheet: PriceSheet,
+  storageClass?: string,
+): string | null {
+  const keys = storageKeys(sheet);
+  if (!storageClass) return null;
+  return matchStorageKey(keys, storageClass);
 }

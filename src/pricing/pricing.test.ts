@@ -41,20 +41,20 @@ describe('deriveRatesFromReference', () => {
 describe('computeNodeFloorMonthly', () => {
   const aws = sheets.find((s) => s.provider === 'aws')!;
 
-  it('fits nginx workload on one t3.medium via catalog', () => {
+  it('fits nginx workload on one t4g.medium via catalog', () => {
     const { nodes, monthlyUsd, instanceType } = computeNodeFloorMonthly(
       1.5,
       1.5,
       aws,
     );
     expect(nodes).toBe(1);
-    expect(instanceType).toBe('t3.medium');
-    expect(monthlyUsd).toBeCloseTo(30.37, 0);
+    expect(instanceType).toBe('t4g.medium');
+    expect(monthlyUsd).toBeCloseTo(24.53, 0);
   });
 
-  it('picks cheaper catalog VM for small workloads', () => {
+  it('picks cheapest catalog VM for small workloads', () => {
     const floor = cheapestNodeFloor(1.5, 1.5, aws);
-    expect(floor.instanceType).toBe('t3.medium');
-    expect(floor.monthlyUsd).toBeLessThan(40);
+    expect(floor.instanceType).toBe('t4g.medium');
+    expect(floor.monthlyUsd).toBeLessThan(30);
   });
 });

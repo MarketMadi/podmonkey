@@ -15,8 +15,8 @@ describe('CLI runEstimate', () => {
     const result = runEstimate({ yaml, providers: ['aws'] });
 
     expect(result.providers).toHaveLength(1);
-    expect(result.providers[0].totalMonthlyUsdRange.min).toBeCloseTo(121.11, 0);
-    expect(result.providers[0].totalMonthlyUsdRange.max).toBeCloseTo(121.37, 0);
+    expect(result.providers[0].totalMonthlyUsdRange.min).toBeCloseTo(115.53, 0);
+    expect(result.providers[0].totalMonthlyUsdRange.max).toBeCloseTo(121.11, 0);
   });
 
   it('loads all four default providers', () => {

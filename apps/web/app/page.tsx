@@ -1,10 +1,39 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { runEstimate, PROVIDER_LABELS } from '../lib/engine';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  exportEstimateMarkdown,
+  runEstimate,
+  PROVIDER_LABELS,
+} from '../lib/engine';
+import type { WebEstimateOptions } from '../lib/engine';
 import { DEFAULT_EXAMPLE, EXAMPLES } from '../lib/examples';
 import type { ConfidenceLevel, MonthlyUsdRange, ProviderId } from '../../../src/types';
 import styles from './page.module.css';
+
+const DEFAULT_OPTIONS: WebEstimateOptions = {
+  gkeFreeTier: true,
+  aksTier: 'free',
+  daemonsetNodeCount: 3,
+  minNodes: 1,
+};
+
+function readYamlFromHash(): string | null {
+  if (typeof window === 'undefined') return null;
+  const raw = window.location.hash.replace(/^#/, '');
+  if (!raw.startsWith('y=')) return null;
+  try {
+    return decodeURIComponent(escape(atob(raw.slice(2))));
+  } catch {
+    return null;
+  }
+}
+
+function writeYamlToHash(yaml: string): void {
+  const encoded = btoa(unescape(encodeURIComponent(yaml)));
+  const base = window.location.pathname + window.location.search;
+  window.history.replaceState(null, '', `${base}#y=${encoded}`);
+}
 
 function formatUsd(n: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -40,15 +69,38 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
 
 export default function Home() {
   const [yaml, setYaml] = useState<string>(DEFAULT_EXAMPLE.yaml);
+  const [options, setOptions] = useState<WebEstimateOptions>(DEFAULT_OPTIONS);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fromHash = readYamlFromHash();
+    if (fromHash) setYaml(fromHash);
+  }, []);
+
   const { result, error } = useMemo(() => {
     try {
-      return { result: runEstimate(yaml), error: null as string | null };
+      return { result: runEstimate(yaml, options), error: null as string | null };
     } catch (e) {
       return {
         result: null,
         error: e instanceof Error ? e.message : 'Failed to parse YAML',
       };
     }
+  }, [yaml, options]);
+
+  const copyMarkdown = useCallback(async () => {
+    if (!result) return;
+    const md = exportEstimateMarkdown(result);
+    await navigator.clipboard.writeText(md);
+    setCopyStatus('Copied markdown');
+    setTimeout(() => setCopyStatus(null), 2000);
+  }, [result]);
+
+  const shareLink = useCallback(() => {
+    writeYamlToHash(yaml);
+    void navigator.clipboard.writeText(window.location.href);
+    setCopyStatus('Share link copied');
+    setTimeout(() => setCopyStatus(null), 2000);
   }, [yaml]);
 
   const cheapest = useMemo(() => {
@@ -115,7 +167,71 @@ export default function Home() {
               >
                 Reset
               </button>
+              {result && (
+                <>
+                  <button
+                    type="button"
+                    className={styles.ghostBtn}
+                    onClick={() => void copyMarkdown()}
+                  >
+                    Copy MD
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.ghostBtn}
+                    onClick={shareLink}
+                  >
+                    Share
+                  </button>
+                </>
+              )}
             </div>
+          </div>
+          <div className={styles.settings}>
+            <label className={styles.setting}>
+              <input
+                type="checkbox"
+                checked={options.gkeFreeTier ?? true}
+                onChange={(e) =>
+                  setOptions((o) => ({ ...o, gkeFreeTier: e.target.checked }))
+                }
+              />
+              GKE free tier
+            </label>
+            <label className={styles.setting}>
+              AKS
+              <select
+                value={options.aksTier ?? 'free'}
+                onChange={(e) =>
+                  setOptions((o) => ({
+                    ...o,
+                    aksTier: e.target.value as 'free' | 'standard',
+                  }))
+                }
+              >
+                <option value="free">Free</option>
+                <option value="standard">Standard ($73/mo)</option>
+              </select>
+            </label>
+            <label className={styles.setting}>
+              DaemonSet nodes
+              <input
+                type="number"
+                min={1}
+                max={1000}
+                value={options.daemonsetNodeCount ?? 3}
+                onChange={(e) =>
+                  setOptions((o) => ({
+                    ...o,
+                    daemonsetNodeCount: Number.parseInt(e.target.value, 10) || 3,
+                  }))
+                }
+                className={styles.numInput}
+              />
+            </label>
+            {copyStatus && (
+              <span className={styles.copyStatus}>{copyStatus}</span>
+            )}
           </div>
           <textarea
             className={styles.textarea}
@@ -161,6 +277,18 @@ export default function Home() {
                   <span className={styles.statLabel}>Storage (PVCs)</span>
                   <span className={styles.statValue}>
                     {result.totals.storageGiB.toFixed(1)} GiB
+                  </span>
+                </div>
+                <div className={styles.stat}>
+                  <span className={styles.statLabel}>Load balancers</span>
+                  <span className={styles.statValue}>
+                    {result.totals.loadBalancerCount}
+                  </span>
+                </div>
+                <div className={styles.stat}>
+                  <span className={styles.statLabel}>Ingress</span>
+                  <span className={styles.statValue}>
+                    {result.totals.ingressCount}
                   </span>
                 </div>
               </div>

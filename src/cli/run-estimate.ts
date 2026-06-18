@@ -62,7 +62,14 @@ export function runEstimate(input: RunEstimateInput): EstimateResult {
     throw new Error('No price sheets loaded');
   }
 
-  const parsed = parseManifests(input.yaml, defaults);
+  const parseDefaults = {
+    ...defaults,
+    ...(input.options?.daemonsetNodeCount !== undefined && {
+      daemonset_node_count: input.options.daemonsetNodeCount,
+    }),
+  };
+
+  const parsed = parseManifests(input.yaml, parseDefaults);
   return estimate(parsed, sheets, input.options);
 }
 

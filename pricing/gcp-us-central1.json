@@ -2,27 +2,28 @@
   "provider": "gcp",
   "service": "gke",
   "region": "us-central1",
-  "as_of": "2026-06-15",
+  "as_of": "2026-06-18",
   "sources": [
     "https://cloud.google.com/kubernetes-engine/pricing",
-    "https://cloud.google.com/compute/vm-instance-pricing"
+    "https://cloud.google.com/compute/vm-instance-pricing",
+    "https://cloud.google.com/compute/disks-pricing"
   ],
   "hours_per_month": 730,
   "control_plane": {
     "hourly_usd": 0.1,
     "tier": "standard",
     "free_zonal_cluster": true,
-    "notes": "One free zonal cluster per billing account"
+    "notes": "One free zonal Autopilot/Standard cluster per billing account"
   },
   "reference_instance": {
     "type": "e2-standard-2",
     "vcpu": 2,
     "memory_gib": 8,
     "hourly_usd": 0.067,
-    "notes": "On-demand us-central1 approximate"
+    "notes": "On-demand us-central1 Linux"
   },
   "instance_catalog": [
-    { "type": "e2-medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.034 },
+    { "type": "e2-medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0335 },
     { "type": "e2-standard-2", "vcpu": 2, "memory_gib": 8, "hourly_usd": 0.067 },
     { "type": "e2-standard-4", "vcpu": 4, "memory_gib": 16, "hourly_usd": 0.134 },
     { "type": "e2-standard-8", "vcpu": 8, "memory_gib": 32, "hourly_usd": 0.268 }
@@ -33,11 +34,13 @@
     "gpu_per_hour_usd": null
   },
   "storage": {
-    "pd_ssd_per_gib_month_usd": 0.17,
     "pd_standard_per_gib_month_usd": 0.04,
+    "pd_balanced_per_gib_month_usd": 0.1,
+    "pd_ssd_per_gib_month_usd": 0.17,
     "default_class": "pd-ssd"
   },
   "load_balancer_monthly_usd": 18.0,
+  "ingress_lb_monthly_usd": 18.0,
   "defaults": {
     "missing_cpu": "100m",
     "missing_memory": "128Mi",

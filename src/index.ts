@@ -16,3 +16,7 @@ export {
 export { computeEstimateDiff } from './cli/diff';
 export { checkPolicy } from './cli/policy';
 export { renderHelmTemplate } from './cli/helm';
+export { fetchClusterYaml } from './cli/kubectl';
+export { cronRunsPerMonth } from './parser/cron-schedule';
+export { storageRateGiBMonth, resolveStorageTierKey } from './pricing/storage-rate';
+export { assertSheetsValid, loadAllPriceSheets } from './pricing/validate-sheets';

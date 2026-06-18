@@ -2,11 +2,13 @@ import { loadAll } from 'js-yaml';
 import type {
   ContainerResources,
   ParseResult,
+  ParsedIngress,
   ParsedPVC,
   ParsedService,
   ParsedWorkload,
   PriceSheet,
 } from '../types';
+import { cronRunsPerMonth } from './cron-schedule';
 import { parseCpu, parseMemory } from '../units';
 
 const WORKLOAD_KINDS = new Set([
@@ -94,12 +96,18 @@ function replicasFor(
     return c ?? p ?? 1;
   }
   if (kind === 'CronJob') {
-    const jobSpec = (spec?.jobTemplate as Record<string, unknown>)?.spec as
+    const cronSpec = doc.spec as Record<string, unknown> | undefined;
+    const schedule = cronSpec?.schedule as string | undefined;
+    const timeZone = cronSpec?.timeZone as string | undefined;
+    const jobSpec = (cronSpec?.jobTemplate as Record<string, unknown>)?.spec as
       | Record<string, unknown>
       | undefined;
-    const p = jobSpec?.parallelism as number | undefined;
-  // v1: assume ~720 runs/month for frequent cron; user override later
-    return (p ?? 1) * 30;
+    const parallelism = (jobSpec?.parallelism as number | undefined) ?? 1;
+    const runs =
+      schedule !== undefined
+        ? cronRunsPerMonth(schedule, { timeZone })
+        : 30;
+    return runs * parallelism;
   }
   return (spec?.replicas as number) ?? 1;
 }
@@ -203,6 +211,20 @@ function serviceFromDoc(doc: Record<string, unknown>): ParsedService | null {
   };
 }
 
+function ingressFromDoc(doc: Record<string, unknown>): ParsedIngress | null {
+  if (doc.kind !== 'Ingress') return null;
+  const spec = doc.spec as Record<string, unknown> | undefined;
+  const meta = doc.metadata as Record<string, unknown> | undefined;
+  const annotations = meta?.annotations as Record<string, string> | undefined;
+  return {
+    name: name(doc),
+    namespace: ns(doc),
+    ingressClass:
+      (spec?.ingressClassName as string | undefined) ??
+      annotations?.['kubernetes.io/ingress.class'],
+  };
+}
+
 export function parseManifests(
   yaml: string,
   defaults: PriceSheet['defaults'],
@@ -215,6 +237,7 @@ export function parseManifests(
   const workloads: ParsedWorkload[] = [];
   const pvcs: ParsedPVC[] = [];
   const services: ParsedService[] = [];
+  const ingresses: ParsedIngress[] = [];
 
   for (const doc of docs) {
     const workload = workloadFromDoc(doc, defaults);
@@ -227,7 +250,10 @@ export function parseManifests(
 
     const svc = serviceFromDoc(doc);
     if (svc) services.push(svc);
+
+    const ing = ingressFromDoc(doc);
+    if (ing) ingresses.push(ing);
   }
 
-  return { workloads, pvcs, services };
+  return { workloads, pvcs, services, ingresses };
 }

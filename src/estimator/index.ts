@@ -126,9 +126,13 @@ export function estimateForProvider(
   const lbCount = parse.services.filter((s) => s.type === 'LoadBalancer').length;
   const lbCost = roundUsd(lbCount * sheet.load_balancer_monthly_usd);
 
+  const ingressCount = parse.ingresses.length;
+  const ingressRate = sheet.ingress_lb_monthly_usd ?? 0;
+  const ingressCost = roundUsd(ingressCount * ingressRate);
+
   const cpCost = controlPlaneMonthly(sheet, options);
 
-  const fixedOverhead = roundUsd(storageCost + lbCost + cpCost);
+  const fixedOverhead = roundUsd(storageCost + lbCost + ingressCost + cpCost);
   const totalMin = roundUsd(compute.min + fixedOverhead);
   const totalMax = roundUsd(compute.max + fixedOverhead);
 
@@ -157,6 +161,15 @@ export function estimateForProvider(
       label: `Load balancers (×${lbCount})`,
       monthlyUsd: lbCost,
     },
+    ...(ingressCount > 0
+      ? [
+          {
+            category: 'ingress' as const,
+            label: `Ingress (×${ingressCount})`,
+            monthlyUsd: ingressCost,
+          },
+        ]
+      : []),
     {
       category: 'control_plane',
       label: `${sheet.service} control plane`,
@@ -190,6 +203,7 @@ export function estimate(
   const loadBalancerCount = parse.services.filter(
     (s) => s.type === 'LoadBalancer',
   ).length;
+  const ingressCount = parse.ingresses.length;
 
   const warnings = collectWarnings(parse);
   const confidence = assessConfidence(parse);
@@ -226,7 +240,7 @@ export function estimate(
     warnings,
     workloads,
     confidence,
-    totals: { cpuCores, memoryGiB, storageGiB, loadBalancerCount },
+    totals: { cpuCores, memoryGiB, storageGiB, loadBalancerCount, ingressCount },
   };
 }
 
