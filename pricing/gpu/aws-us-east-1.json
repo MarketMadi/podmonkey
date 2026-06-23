@@ -1,0 +1,82 @@
+{
+  "provider": "aws",
+  "service": "eks-gpu",
+  "region": "us-east-1",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T07:50:58.629Z",
+  "sources": [
+    "https://aws.amazon.com/eks/pricing/",
+    "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json",
+    "https://aws.amazon.com/elasticloadbalancing/pricing/"
+  ],
+  "hours_per_month": 730,
+  "currency": "USD",
+  "instances": [
+    {
+      "type": "g4dn.xlarge",
+      "gpu_model": "NVIDIA T4",
+      "gpu_count": 1,
+      "gpu_memory_gib": 16,
+      "vcpu": 4,
+      "memory_gib": 16,
+      "hourly_usd": 0.526,
+      "monthly_usd": 383.98,
+      "source": "AWS Price List API — AmazonEC2 on-demand Linux"
+    },
+    {
+      "type": "g4dn.2xlarge",
+      "gpu_model": "NVIDIA T4",
+      "gpu_count": 1,
+      "gpu_memory_gib": 16,
+      "vcpu": 8,
+      "memory_gib": 32,
+      "hourly_usd": 0.752,
+      "monthly_usd": 548.96,
+      "source": "AWS Price List API — AmazonEC2 on-demand Linux"
+    },
+    {
+      "type": "g5.xlarge",
+      "gpu_model": "NVIDIA A10G",
+      "gpu_count": 1,
+      "gpu_memory_gib": 24,
+      "vcpu": 4,
+      "memory_gib": 16,
+      "hourly_usd": 1.006,
+      "monthly_usd": 734.38,
+      "source": "AWS Price List API — AmazonEC2 on-demand Linux"
+    },
+    {
+      "type": "g5.2xlarge",
+      "gpu_model": "NVIDIA A10G",
+      "gpu_count": 1,
+      "gpu_memory_gib": 24,
+      "vcpu": 8,
+      "memory_gib": 32,
+      "hourly_usd": 1.212,
+      "monthly_usd": 884.76,
+      "source": "AWS Price List API — AmazonEC2 on-demand Linux"
+    },
+    {
+      "type": "g5.12xlarge",
+      "gpu_model": "NVIDIA A10G",
+      "gpu_count": 4,
+      "gpu_memory_gib": 96,
+      "vcpu": 48,
+      "memory_gib": 192,
+      "hourly_usd": 5.672,
+      "monthly_usd": 4140.56,
+      "source": "AWS Price List API — AmazonEC2 on-demand Linux"
+    },
+    {
+      "type": "p4d.24xlarge",
+      "gpu_model": "NVIDIA A100",
+      "gpu_count": 8,
+      "gpu_memory_gib": 320,
+      "vcpu": 96,
+      "memory_gib": 1152,
+      "hourly_usd": 21.957642,
+      "monthly_usd": 16029.08,
+      "source": "AWS Price List API — AmazonEC2 on-demand Linux"
+    }
+  ]
+}

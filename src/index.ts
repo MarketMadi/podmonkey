@@ -6,6 +6,11 @@ export { deriveRatesFromReference, resolveRates, ratesNormalizeToReference } fro
 export { assessConfidence } from './pricing/confidence';
 export { collectWarnings } from './warnings/index';
 export { loadPriceSheets, loadPriceSheet, listAvailableSheets } from './pricing/load-sheets';
+export {
+  loadGpuPriceSheet,
+  loadAllGpuPriceSheets,
+  listAvailableGpuSheets,
+} from './pricing/load-gpu-sheets';
 export { runEstimate, readYamlInput } from './cli/run-estimate';
 export {
   formatEstimateMarkdown,
@@ -20,3 +25,7 @@ export { fetchClusterYaml } from './cli/kubectl';
 export { cronRunsPerMonth } from './parser/cron-schedule';
 export { storageRateGiBMonth, resolveStorageTierKey } from './pricing/storage-rate';
 export { assertSheetsValid, loadAllPriceSheets } from './pricing/validate-sheets';
+export {
+  assertGpuSheetsValid,
+  assertPricingFresh,
+} from './pricing/validate-gpu-sheets';

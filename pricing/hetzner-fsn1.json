@@ -29,8 +29,7 @@
   ],
   "rates": {
     "cpu_per_vcpu_hour_usd": 0.0051,
-    "memory_per_gib_hour_usd": 0.0026,
-    "gpu_per_hour_usd": null
+    "memory_per_gib_hour_usd": 0.0026
   },
   "storage": {
     "volume_per_gib_month_usd": 0.052,

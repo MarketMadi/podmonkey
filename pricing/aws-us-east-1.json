@@ -2,11 +2,11 @@
   "provider": "aws",
   "service": "eks",
   "region": "us-east-1",
-  "as_of": "2026-06-18",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T07:50:58.629Z",
   "sources": [
     "https://aws.amazon.com/eks/pricing/",
-    "https://aws.amazon.com/ec2/pricing/on-demand/",
-    "https://aws.amazon.com/ebs/pricing/",
+    "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json",
     "https://aws.amazon.com/elasticloadbalancing/pricing/"
   ],
   "hours_per_month": 730,
@@ -20,21 +20,40 @@
     "vcpu": 2,
     "memory_gib": 8,
     "hourly_usd": 0.096,
-    "notes": "Linux on-demand us-east-1"
+    "notes": "Linux on-demand us-east-1 (AWS Price List API)"
   },
   "instance_catalog": [
-    { "type": "t4g.medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0336 },
-    { "type": "t3.medium", "vcpu": 2, "memory_gib": 4, "hourly_usd": 0.0416 },
-    { "type": "m6i.large", "vcpu": 2, "memory_gib": 8, "hourly_usd": 0.096 },
-    { "type": "m6i.xlarge", "vcpu": 4, "memory_gib": 16, "hourly_usd": 0.192 },
-    { "type": "m6i.2xlarge", "vcpu": 8, "memory_gib": 32, "hourly_usd": 0.384 }
+    {
+      "type": "t4g.medium",
+      "vcpu": 2,
+      "memory_gib": 4,
+      "hourly_usd": 0.0336
+    },
+    {
+      "type": "t3.medium",
+      "vcpu": 2,
+      "memory_gib": 4,
+      "hourly_usd": 0.0416
+    },
+    {
+      "type": "m6i.large",
+      "vcpu": 2,
+      "memory_gib": 8,
+      "hourly_usd": 0.096
+    },
+    {
+      "type": "m6i.xlarge",
+      "vcpu": 4,
+      "memory_gib": 16,
+      "hourly_usd": 0.192
+    },
+    {
+      "type": "m6i.2xlarge",
+      "vcpu": 8,
+      "memory_gib": 32,
+      "hourly_usd": 0.384
+    }
   ],
-  "rates": {
-    "cpu_per_vcpu_hour_usd": 0.0416,
-    "memory_per_gib_hour_usd": 0.0052,
-    "gpu_per_hour_usd": null,
-    "derivation": "OpenCost Appendix A normalization from m6i.large hourly"
-  },
   "storage": {
     "gp3_per_gib_month_usd": 0.08,
     "gp2_per_gib_month_usd": 0.1,
@@ -44,11 +63,16 @@
     "sc1_per_gib_month_usd": 0.015,
     "default_class": "gp3"
   },
-  "load_balancer_monthly_usd": 18.0,
-  "ingress_lb_monthly_usd": 18.0,
+  "load_balancer_monthly_usd": 18,
+  "ingress_lb_monthly_usd": 18,
   "defaults": {
     "missing_cpu": "100m",
     "missing_memory": "128Mi",
     "daemonset_node_count": 3
+  },
+  "rates": {
+    "cpu_per_vcpu_hour_usd": 0.02057142857142857,
+    "memory_per_gib_hour_usd": 0.006857142857142857,
+    "derivation": "OpenCost Appendix A normalization from m6i.large hourly"
   }
 }

@@ -1,9 +1,41 @@
 # Pricing sources
 
-**As of:** 2026-06-18  
-**Convention:** On-demand Linux unless noted. **730 h/mo** for compute.
+**As of:** refreshed via `npm run refresh-pricing` (see [Pricing refresh](#pricing-refresh))
 
-Podmonkey uses **list prices** from public provider pages — not enterprise discounts, Spot, or reserved capacity.
+Podmonkey uses **list prices** from public provider APIs — not enterprise discounts, Spot, or reserved capacity. Every rate in `pricing/` and `pricing/gpu/` is fetched from a provider API; nothing is estimated or LLM-generated.
+
+## Pricing refresh
+
+```bash
+# Refresh what you can (AWS + Azure work without credentials)
+npm run refresh-pricing
+
+# Full refresh — required for CI cron and before merge
+export GCP_API_KEY=...          # Cloud Billing API enabled
+export HETZNER_API_TOKEN=...    # Hetzner Cloud read-only token
+npm run refresh-pricing -- --strict
+npm test
+```
+
+**GitHub Actions** (`.github/workflows/refresh-pricing.yml`) runs every **3 days** with `--strict`, opens a PR when prices change. Add repository secrets:
+
+| Secret | Purpose |
+|--------|---------|
+| `GCP_API_KEY` | [Cloud Billing Catalog API](https://cloud.google.com/billing/docs/reference/pricing-api) |
+| `HETZNER_API_TOKEN` | [Hetzner Cloud API](https://docs.hetzner.com/cloud/api/getting-started/generating-api-token/) (read-only) |
+
+**APIs used (no auth unless noted):**
+
+| Provider | Endpoint |
+|----------|----------|
+| AWS | [EC2 Price List API](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json) |
+| Azure | [Retail Prices API](https://prices.azure.com/api/retail/prices) |
+| GCP | Cloud Billing Catalog API (`GCP_API_KEY`) |
+| Hetzner | `GET /pricing` (`HETZNER_API_TOKEN`) + [EUR→USD](https://open.er-api.com/v6/latest/EUR) |
+
+Sheets include `as_of` (date) and `fetched_at` (ISO timestamp). CI fails if sheets are older than 4 days.
+
+---
 
 ## AWS EKS (`pricing/aws-us-east-1.json`)
 
@@ -52,12 +84,24 @@ Marginal CPU/RAM rates are **derived** from `m6i.large` per [OpenCost Appendix A
 | Load balancer | ~$5.90/mo | Hetzner LB |
 | Ingress | $0 (no separate LB fee modeled) | — |
 
+## GPU inference (`pricing/gpu/`)
+
+| File | Instances | Source |
+|------|-----------|--------|
+| `aws-us-east-1.json` | g4dn, g5, p4d | AWS Price List API |
+| `azure-eastus.json` | NCas T4, NCads A100 | Azure Retail Prices API |
+| `gcp-us-central1.json` | g2 (L4), a2 (A100) | GCP Cloud Billing Catalog API |
+| `hetzner-fsn1.json` | GEX44, GEX130 | Hetzner Cloud API |
+
 ## Validation
 
-CI runs `src/pricing/benchmark.test.ts`:
+CI runs:
 
-- OpenCost rate normalization per sheet
-- Published list-price spot checks (EKS $73, gp3 $0.08, etc.)
-- Storage class mapping (`gp2`, `premium-rwo`, `io2`)
+- `src/pricing/benchmark.test.ts` — CPU sheet structure and spot checks
+- `src/pricing/gpu-benchmark.test.ts` — GPU sheets, freshness, API provenance
 
-Update `as_of` and re-run `npm test` when refreshing sheets.
+Update pricing:
+
+```bash
+npm run refresh-pricing -- --strict && npm test
+```

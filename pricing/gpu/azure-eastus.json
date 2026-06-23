@@ -1,0 +1,49 @@
+{
+  "provider": "azure",
+  "service": "aks-gpu",
+  "region": "eastus",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T07:50:58.629Z",
+  "sources": [
+    "https://azure.microsoft.com/en-us/pricing/details/kubernetes-service/",
+    "https://prices.azure.com/api/retail/prices",
+    "https://azure.microsoft.com/en-us/pricing/details/managed-disks/"
+  ],
+  "hours_per_month": 730,
+  "currency": "USD",
+  "instances": [
+    {
+      "type": "Standard_NC4as_T4_v3",
+      "gpu_model": "NVIDIA T4",
+      "gpu_count": 1,
+      "gpu_memory_gib": 16,
+      "vcpu": 4,
+      "memory_gib": 28,
+      "hourly_usd": 0.526,
+      "monthly_usd": 383.98,
+      "source": "Azure Retail Prices API — Linux on-demand"
+    },
+    {
+      "type": "Standard_NC8as_T4_v3",
+      "gpu_model": "NVIDIA T4",
+      "gpu_count": 1,
+      "gpu_memory_gib": 16,
+      "vcpu": 8,
+      "memory_gib": 56,
+      "hourly_usd": 0.752,
+      "monthly_usd": 548.96,
+      "source": "Azure Retail Prices API — Linux on-demand"
+    },
+    {
+      "type": "Standard_NC24ads_A100_v4",
+      "gpu_model": "NVIDIA A100",
+      "gpu_count": 1,
+      "gpu_memory_gib": 80,
+      "vcpu": 24,
+      "memory_gib": 220,
+      "hourly_usd": 3.673,
+      "monthly_usd": 2681.29,
+      "source": "Azure Retail Prices API — Linux on-demand"
+    }
+  ]
+}

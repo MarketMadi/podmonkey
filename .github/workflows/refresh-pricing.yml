@@ -1,0 +1,53 @@
+name: Refresh pricing
+
+on:
+  schedule:
+    # Every 3 days at 06:00 UTC
+    - cron: '0 6 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch live prices from provider APIs
+        run: npm run refresh-pricing -- --strict
+        env:
+          GCP_API_KEY: ${{ secrets.GCP_API_KEY }}
+          HETZNER_API_TOKEN: ${{ secrets.HETZNER_API_TOKEN }}
+
+      - name: Verify pricing tests
+        run: npm test
+
+      - name: Create pull request if prices changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: 'chore(pricing): refresh from provider APIs'
+          title: 'chore(pricing): refresh from provider APIs'
+          body: |
+            Automated pricing refresh from live provider APIs.
+
+            - AWS: [Price List API](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/index.json)
+            - Azure: [Retail Prices API](https://prices.azure.com/api/retail/prices)
+            - GCP: [Cloud Billing Catalog API](https://cloud.google.com/billing/docs/reference/pricing-api)
+            - Hetzner: [Cloud API /pricing](https://docs.hetzner.cloud/#pricing)
+
+            EUR→USD via [open.er-api.com](https://open.er-api.com/).
+
+            Review diff, confirm tests pass, then merge.
+          branch: bot/pricing-refresh
+          delete-branch: true
