@@ -54,6 +54,27 @@ function optionalPositiveNumber(value: unknown): number | undefined {
   return n;
 }
 
+function catalogTokensPerSecond(
+  modelId: string,
+  catalog: import('../catalog/types').ModelCatalog | undefined,
+  opts: {
+    quantization?: string;
+    contextLength?: number;
+    concurrentUsers?: number;
+    tokensPerSecond?: number;
+  },
+): number {
+  const vram = computeModelVram({
+    modelId,
+    quantization: opts.quantization,
+    contextLength: opts.contextLength,
+    concurrentUsers: opts.concurrentUsers,
+    tokensPerSecond: opts.tokensPerSecond,
+    catalog,
+  });
+  return vram.tokensPerSecond;
+}
+
 export function parseInferenceProfile(
   yaml: string,
   catalog?: import('../catalog/types').ModelCatalog,
@@ -72,16 +93,10 @@ export function parseInferenceProfile(
   const spec = (doc.spec as Record<string, unknown>) ?? {};
 
   const requestsPerDay = Number(spec.requestsPerDay ?? spec.requests_per_day);
-  const avgSecondsPerRequest = Number(
-    spec.avgSecondsPerRequest ?? spec.avg_seconds_per_request,
-  );
   const workers = Number(spec.workers ?? 1);
 
   if (!Number.isFinite(requestsPerDay) || requestsPerDay <= 0) {
     throw new Error('spec.requestsPerDay must be a positive number');
-  }
-  if (!Number.isFinite(avgSecondsPerRequest) || avgSecondsPerRequest <= 0) {
-    throw new Error('spec.avgSecondsPerRequest must be a positive number');
   }
   if (!Number.isFinite(workers) || workers < 1) {
     throw new Error('spec.workers must be >= 1');
@@ -100,10 +115,49 @@ export function parseInferenceProfile(
     spec.tokensPerSecond ?? spec.tokens_per_second,
   );
 
+  const inputTokensPerRequest = optionalPositiveInt(
+    spec.inputTokensPerRequest ?? spec.input_tokens_per_request,
+  );
+  const outputTokensPerRequest = optionalPositiveInt(
+    spec.outputTokensPerRequest ?? spec.output_tokens_per_request,
+  );
+
+  let avgSecondsPerRequest = optionalPositiveNumber(
+    spec.avgSecondsPerRequest ?? spec.avg_seconds_per_request,
+  );
+
+  if (
+    avgSecondsPerRequest == null &&
+    inputTokensPerRequest != null &&
+    outputTokensPerRequest != null &&
+    modelId
+  ) {
+    const tps = catalogTokensPerSecond(modelId, catalog, {
+      quantization,
+      contextLength,
+      concurrentUsers,
+      tokensPerSecond,
+    });
+    avgSecondsPerRequest =
+      (inputTokensPerRequest + outputTokensPerRequest) / tps;
+  }
+
+  if (avgSecondsPerRequest == null || avgSecondsPerRequest <= 0) {
+    throw new Error(
+      'Set spec.inputTokensPerRequest + spec.outputTokensPerRequest (recommended), or spec.avgSecondsPerRequest',
+    );
+  }
+
+  if (!modelId) {
+    throw new Error(
+      'spec.model is required — pick a model like llama-3.1-8b for week-1 cost math',
+    );
+  }
+
   let gpu: GpuTierId;
   if (spec.gpu != null) {
     gpu = asGpuTier(spec.gpu);
-  } else if (modelId) {
+  } else {
     const vram = computeModelVram({
       modelId,
       quantization,
@@ -113,10 +167,6 @@ export function parseInferenceProfile(
       catalog,
     });
     gpu = vram.minGpuTier;
-  } else {
-    throw new Error(
-      'spec.model or spec.gpu is required — use model for auto GPU tier selection',
-    );
   }
 
   return {
@@ -128,6 +178,8 @@ export function parseInferenceProfile(
     contextLength,
     concurrentUsers,
     tokensPerSecond,
+    inputTokensPerRequest,
+    outputTokensPerRequest,
     requestsPerDay,
     avgSecondsPerRequest,
     workers: Math.floor(workers),

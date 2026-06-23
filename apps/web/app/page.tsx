@@ -9,6 +9,7 @@ import {
   runInferenceEstimate,
   PROVIDER_LABELS,
   MARKETPLACE_LABELS,
+  API_PROVIDER_LABELS,
   type InputMode,
 } from '../lib/engine';
 import type { WebEstimateOptions } from '../lib/engine';
@@ -19,6 +20,7 @@ import {
   K8S_EXAMPLES,
 } from '../lib/examples';
 import type {
+  ApiProviderId,
   ConfidenceLevel,
   MarketplaceProviderId,
   MonthlyUsdRange,
@@ -83,7 +85,7 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
 };
 
 export default function Home() {
-  const [mode, setMode] = useState<InputMode>('kubernetes');
+  const [mode, setMode] = useState<InputMode>('inference');
   const [k8sYaml, setK8sYaml] = useState<string>(DEFAULT_K8S_EXAMPLE.yaml);
   const [inferenceYaml, setInferenceYaml] = useState<string>(
     DEFAULT_INFERENCE_EXAMPLE.yaml,
@@ -160,11 +162,6 @@ export default function Home() {
     );
   }, [k8sResult.result]);
 
-  const cheapestInference = useMemo(() => {
-    if (!inferenceResult.result?.providers.length) return null;
-    return inferenceResult.result.providers[0];
-  }, [inferenceResult.result]);
-
   const examples = mode === 'kubernetes' ? K8S_EXAMPLES : INFERENCE_EXAMPLES;
   const defaultExample =
     mode === 'kubernetes' ? DEFAULT_K8S_EXAMPLE : DEFAULT_INFERENCE_EXAMPLE;
@@ -179,17 +176,26 @@ export default function Home() {
           <p className={styles.subtitle}>
             {mode === 'kubernetes'
               ? 'Paste Kubernetes YAML → compare cloud + GPU node costs.'
-              : 'Paste an inference profile → compare RunPod, Modal, Lambda, and more.'}
+              : 'Week 1 math: API vs GPU rental for your chatbot or RAG prototype.'}
           </p>
         </div>
         <p className={styles.disclaimer}>
           {mode === 'kubernetes'
             ? 'Planning estimates from resource requests and public list prices. GPU workloads use GPU instance node floor when nvidia.com/gpu is set.'
-            : 'Serverless = pay per compute-second. Pod = always-on $/hr × workers. Excludes egress, storage, cold starts.'}
+            : 'Rough planning only (±40%). Pick a model, set requests/day and tokens in/out — we compare Groq, OpenAI, Together vs GPU hosts. Not an invoice.'}
         </p>
       </header>
 
       <div className={styles.modeTabs} role="tablist" aria-label="Input mode">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'inference'}
+          className={mode === 'inference' ? styles.modeTabActive : styles.modeTab}
+          onClick={() => setMode('inference')}
+        >
+          AI startup math
+        </button>
         <button
           type="button"
           role="tab"
@@ -199,21 +205,12 @@ export default function Home() {
         >
           Kubernetes
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'inference'}
-          className={mode === 'inference' ? styles.modeTabActive : styles.modeTab}
-          onClick={() => setMode('inference')}
-        >
-          GPU inference
-        </button>
       </div>
 
       <main className={styles.main}>
         <section className={styles.editorPanel}>
           <div className={styles.panelHeader}>
-            <h2>{mode === 'kubernetes' ? 'Manifests' : 'Inference profile'}</h2>
+            <h2>{mode === 'kubernetes' ? 'Manifests' : 'Your workload'}</h2>
             <div className={styles.panelActions}>
               <select
                 className={styles.exampleSelect}
@@ -310,10 +307,9 @@ export default function Home() {
 
           {mode === 'inference' && (
             <p className={styles.inputHint}>
-              Use <code>kind: InferenceEstimate</code> with{' '}
-              <code>spec.model</code> (auto GPU tier) or <code>spec.gpu</code>,{' '}
-              <code>requestsPerDay</code>, <code>avgSecondsPerRequest</code>, and{' '}
-              <code>billing: serverless|pod</code>.
+              Set <code>spec.model</code>, <code>requestsPerDay</code>,{' '}
+              <code>inputTokensPerRequest</code> / <code>outputTokensPerRequest</code>.
+              Example: 800 tokens in (prompt + docs), 250 out (reply).
             </p>
           )}
 
@@ -336,10 +332,7 @@ export default function Home() {
             <K8sResults result={k8sResult.result} cheapest={cheapestK8s} />
           )}
           {mode === 'inference' && inferenceResult.result && (
-            <InferenceResults
-              result={inferenceResult.result}
-              cheapest={cheapestInference}
-            />
+            <InferenceResults result={inferenceResult.result} />
           )}
         </section>
       </main>
@@ -475,91 +468,136 @@ function K8sResults({
 
 function InferenceResults({
   result,
-  cheapest,
 }: {
   result: NonNullable<ReturnType<typeof runInferenceEstimate>>;
-  cheapest: (typeof result.providers)[0] | null;
 }) {
+  const { verdict } = result;
+  const winnerApi =
+    verdict.kind === 'api' ? result.apiProviders[0]?.provider : undefined;
+  const winnerGpu =
+    verdict.kind === 'gpu' ? result.providers[0]?.provider : undefined;
+
   return (
     <>
-      {result.model && (
-        <div className={styles.modelBanner}>
-          <strong>{result.model.label}</strong>
-          <span>
-            {result.model.quantization} · ~{result.model.totalVramGiB.toFixed(1)} GiB
-            VRAM · min tier {result.model.minGpuTier}
-          </span>
-        </div>
-      )}
+      <div className={styles.verdictBanner} data-kind={verdict.kind}>
+        <strong>{verdict.headline}</strong>
+        <p>{verdict.detail}</p>
+        <span className={styles.verdictRange}>
+          Planning range {formatUsd(verdict.planningMinUsd)}–
+          {formatUsd(verdict.planningMaxUsd)}/mo
+        </span>
+      </div>
 
       <div className={styles.totals}>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>GPU tier</span>
-          <span className={styles.statValue}>{result.profile.gpu}</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Billing</span>
-          <span className={styles.statValue}>{result.profile.billing}</span>
-        </div>
+        {result.model && (
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>Model</span>
+            <span className={styles.statValue}>{result.model.label}</span>
+          </div>
+        )}
         <div className={styles.stat}>
           <span className={styles.statLabel}>Requests / month</span>
           <span className={styles.statValue}>
             {result.totals.requestsPerMonth.toLocaleString()}
           </span>
         </div>
-        {result.totals.usdPerMillionTokens != null && (
-          <div className={styles.stat}>
-            <span className={styles.statLabel}>$/1M tokens</span>
-            <span className={styles.statValue}>
-              ${result.totals.usdPerMillionTokens.toFixed(2)}
-            </span>
-          </div>
-        )}
+        <div className={styles.stat}>
+          <span className={styles.statLabel}>Tokens / month</span>
+          <span className={styles.statValue}>
+            {Math.round(result.totals.tokensPerMonth).toLocaleString()}
+          </span>
+        </div>
       </div>
 
-      <h2 className={styles.sectionTitle}>Marketplace comparison</h2>
-      <div className={styles.providerGrid}>
-        {result.providers.map((p) => {
-          const isCheapest = cheapest?.provider === p.provider;
-          return (
-            <article
-              key={p.provider}
-              className={`${styles.providerCard} ${isCheapest ? styles.cheapest : ''}`}
-            >
-              <h3>{MARKETPLACE_LABELS[p.provider as MarketplaceProviderId]}</h3>
-              <p className={styles.region}>{p.matchedTier}</p>
-              <p className={styles.price}>
-                {formatUsd(p.totalMonthlyUsd)}
-                <span>/mo</span>
-              </p>
-              {isCheapest && result.providers.length > 1 && (
-                <span className={styles.badge}>Lowest</span>
-              )}
-              <ul className={styles.lineItems}>
-                {p.lineItems.map((item) => (
-                  <li key={item.label}>
-                    <span>{item.label}</span>
-                    <span>{formatUsd(item.monthlyUsd)}</span>
-                  </li>
-                ))}
-                {p.usdPerMillionTokens != null && (
-                  <li>
-                    <span>$/1M tokens</span>
-                    <span>${p.usdPerMillionTokens.toFixed(2)}</span>
-                  </li>
-                )}
-                {p.podBreakEvenRequestsPerDay != null && (
-                  <li>
-                    <span>Pod break-even</span>
-                    <span>{p.podBreakEvenRequestsPerDay.toLocaleString()} req/day</span>
-                  </li>
-                )}
-              </ul>
-              <p className={styles.asOf}>Pricing as of {p.asOf}</p>
-            </article>
-          );
-        })}
-      </div>
+      {result.apiProviders.length > 0 && (
+        <>
+          <h2 className={styles.sectionTitle}>Managed APIs</h2>
+          <p className={styles.sectionHint}>
+            Fastest path in week 1 — no GPU setup. OpenAI row is a quality baseline,
+            not the same open-weight model.
+          </p>
+          <div className={styles.providerGrid}>
+            {result.apiProviders.map((p) => {
+              const isWinner = winnerApi === p.provider;
+              return (
+                <article
+                  key={p.provider}
+                  className={`${styles.providerCard} ${isWinner ? styles.cheapest : ''}`}
+                >
+                  <h3>{API_PROVIDER_LABELS[p.provider as ApiProviderId]}</h3>
+                  <p className={styles.region}>{p.label}</p>
+                  <p className={styles.price}>
+                    {formatUsd(p.totalMonthlyUsd)}
+                    <span>/mo</span>
+                  </p>
+                  {isWinner && (
+                    <span className={styles.badge}>Best for week 1</span>
+                  )}
+                  <ul className={styles.lineItems}>
+                    <li>
+                      <span>$/1M tokens (blended)</span>
+                      <span>${p.usdPerMillionTokens.toFixed(2)}</span>
+                    </li>
+                    <li>
+                      <span>Input / output</span>
+                      <span>
+                        ${p.inputPerMillionUsd} / ${p.outputPerMillionUsd} per 1M
+                      </span>
+                    </li>
+                  </ul>
+                  <p className={styles.asOf}>Pricing as of {p.asOf}</p>
+                </article>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {result.providers.length > 0 && (
+        <>
+          <h2 className={styles.sectionTitle}>GPU rental</h2>
+          <p className={styles.sectionHint}>
+            Self-host when you need control or scale — budget eng time to set up vLLM
+            or similar.
+          </p>
+          <div className={styles.providerGrid}>
+            {result.providers.map((p) => {
+              const isWinner = winnerGpu === p.provider;
+              return (
+                <article
+                  key={p.provider}
+                  className={`${styles.providerCard} ${isWinner ? styles.cheapest : ''}`}
+                >
+                  <h3>{MARKETPLACE_LABELS[p.provider as MarketplaceProviderId]}</h3>
+                  <p className={styles.region}>{p.matchedTier}</p>
+                  <p className={styles.price}>
+                    {formatUsd(p.totalMonthlyUsd)}
+                    <span>/mo</span>
+                  </p>
+                  {isWinner && (
+                    <span className={styles.badge}>Cheapest overall</span>
+                  )}
+                  <ul className={styles.lineItems}>
+                    {p.lineItems.map((item) => (
+                      <li key={item.label}>
+                        <span>{item.label}</span>
+                        <span>{formatUsd(item.monthlyUsd)}</span>
+                      </li>
+                    ))}
+                    {p.usdPerMillionTokens != null && (
+                      <li>
+                        <span>$/1M tokens</span>
+                        <span>${p.usdPerMillionTokens.toFixed(2)}</span>
+                      </li>
+                    )}
+                  </ul>
+                  <p className={styles.asOf}>Pricing as of {p.asOf}</p>
+                </article>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {result.warnings.length > 0 && <WarningsList warnings={result.warnings} />}
     </>

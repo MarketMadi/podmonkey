@@ -1,22 +1,27 @@
 import type {
+  ApiPriceSheet,
   EstimateOptions,
   EstimateResult,
   GpuPriceSheet,
   InferenceEstimateResult,
+  MarketplacePriceSheet,
   PriceSheet,
 } from '../../../src/types';
+import { formatEstimateMarkdown } from '../../../src/cli/format';
 import { parseManifests } from '../../../src/parser/index';
 import {
   isInferenceProfileYaml,
   parseInferenceProfile,
 } from '../../../src/parser/inference-profile';
 import { estimate, PROVIDER_LABELS } from '../../../src/estimator/index';
+import groqSheet from '../../../pricing/api/groq.json';
+import openaiSheet from '../../../pricing/api/openai.json';
+import togetherSheet from '../../../pricing/api/together.json';
 import {
   estimateInference,
   MARKETPLACE_LABELS,
+  API_PROVIDER_LABELS,
 } from '../../../src/estimator/inference';
-import { formatEstimateMarkdown } from '../../../src/cli/format';
-import type { MarketplacePriceSheet } from '../../../src/types';
 
 import awsSheet from '../../../pricing/aws-us-east-1.json';
 import gcpSheet from '../../../pricing/gcp-us-central1.json';
@@ -91,9 +96,15 @@ export function runEstimate(
 const CATALOG = modelCatalog as ModelCatalog;
 setDefaultModelCatalog(CATALOG);
 
+const API_SHEETS: ApiPriceSheet[] = [
+  groqSheet as ApiPriceSheet,
+  openaiSheet as ApiPriceSheet,
+  togetherSheet as ApiPriceSheet,
+];
+
 export function runInferenceEstimate(yaml: string): InferenceEstimateResult {
   const profile = parseInferenceProfile(yaml, CATALOG);
-  return estimateInference(profile, MARKETPLACE_SHEETS, CATALOG);
+  return estimateInference(profile, MARKETPLACE_SHEETS, CATALOG, API_SHEETS);
 }
 
 export function exportEstimateMarkdown(result: EstimateResult): string {
@@ -103,30 +114,38 @@ export function exportEstimateMarkdown(result: EstimateResult): string {
 export function exportInferenceMarkdown(
   result: InferenceEstimateResult,
 ): string {
+  const v = result.verdict;
   const lines = [
-    '## Inference cost estimate (planning)',
+    '## AI startup cost estimate (week 1)',
+    '',
+    `**${v.headline}**`,
+    v.detail,
+    `Planning range: $${v.planningMinUsd}–$${v.planningMaxUsd}/mo (±40%)`,
     '',
     `**Profile:** ${result.profile.name}`,
-    result.model
-      ? `**Model:** ${result.model.label} (${result.model.quantization}, ~${result.model.totalVramGiB.toFixed(1)} GiB VRAM)`
-      : null,
-    `**GPU tier:** ${result.profile.gpu}`,
-    `**Billing:** ${result.profile.billing}`,
+    result.model ? `**Model:** ${result.model.label}` : null,
     `**Requests/day:** ${result.profile.requestsPerDay.toLocaleString()}`,
-    `**Avg seconds/request:** ${result.profile.avgSecondsPerRequest}`,
-    `**Workers:** ${result.profile.workers}`,
-    result.totals.usdPerMillionTokens != null
-      ? `**$/1M tokens (cheapest):** $${result.totals.usdPerMillionTokens.toFixed(2)}`
+    result.profile.inputTokensPerRequest != null
+      ? `**Tokens/request:** ${result.profile.inputTokensPerRequest} in / ${result.profile.outputTokensPerRequest} out`
       : null,
     '',
-    '| Provider | $/month | $/1M tokens | Pod break-even req/day |',
-    '|----------|---------|-------------|------------------------|',
+    '### Managed APIs',
+    '| Provider | $/month | $/1M tokens |',
+    '|----------|---------|-------------|',
+    ...result.apiProviders.map(
+      (p) =>
+        `| ${API_PROVIDER_LABELS[p.provider]} (${p.label}) | $${p.totalMonthlyUsd.toFixed(0)} | $${p.usdPerMillionTokens.toFixed(2)} |`,
+    ),
+    '',
+    '### GPU rental',
+    '| Provider | $/month | $/1M tokens |',
+    '|----------|---------|-------------|',
     ...result.providers.map(
       (p) =>
-        `| ${MARKETPLACE_LABELS[p.provider]} | $${p.totalMonthlyUsd.toFixed(0)} | ${p.usdPerMillionTokens != null ? `$${p.usdPerMillionTokens.toFixed(2)}` : '—'} | ${p.podBreakEvenRequestsPerDay?.toLocaleString() ?? '—'} |`,
+        `| ${MARKETPLACE_LABELS[p.provider]} | $${p.totalMonthlyUsd.toFixed(0)} | ${p.usdPerMillionTokens != null ? `$${p.usdPerMillionTokens.toFixed(2)}` : '—'} |`,
     ),
   ].filter((line): line is string => line != null);
   return lines.join('\n');
 }
 
-export { PROVIDER_LABELS, MARKETPLACE_LABELS };
+export { PROVIDER_LABELS, MARKETPLACE_LABELS, API_PROVIDER_LABELS };

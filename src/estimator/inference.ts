@@ -1,6 +1,14 @@
+import {
+  API_PROVIDER_LABELS,
+  estimateApiProviders,
+  planningRange,
+  PLANNING_MARGIN,
+} from './api-inference';
 import { computeModelVram } from '../catalog/resolve';
 import { collectModelVramWarnings } from '../catalog/warnings';
 import type {
+  ApiPriceSheet,
+  FounderVerdict,
   GpuPriceSheet,
   InferenceEstimateResult,
   InferenceProfile,
@@ -61,6 +69,17 @@ export function tokensPerMonth(
   profile: InferenceProfile,
   catalog?: import('../catalog/types').ModelCatalog,
 ): number {
+  if (
+    profile.inputTokensPerRequest != null &&
+    profile.outputTokensPerRequest != null
+  ) {
+    return (
+      (profile.inputTokensPerRequest + profile.outputTokensPerRequest) *
+      profile.requestsPerDay *
+      DAYS_PER_MONTH
+    );
+  }
+
   const tps =
     profile.tokensPerSecond ??
     (profile.model
@@ -87,7 +106,6 @@ export function usdPerMillionTokens(
   return roundUsd((monthlyUsd / tpm) * 1_000_000);
 }
 
-/** Requests/day where serverless monthly cost equals pod monthly cost. */
 export function podBreakEvenRequestsPerDay(
   tier: {
     serverless_per_second_usd: number | null;
@@ -163,11 +181,60 @@ function estimateMarketplaceProvider(
   };
 }
 
+function buildFounderVerdict(
+  apiProviders: InferenceEstimateResult['apiProviders'],
+  gpuProviders: MarketplaceProviderEstimate[],
+): FounderVerdict {
+  const cheapestApi = apiProviders[0];
+  const cheapestGpu = gpuProviders[0];
+
+  if (cheapestApi && (!cheapestGpu || cheapestApi.totalMonthlyUsd <= cheapestGpu.totalMonthlyUsd)) {
+    const range = planningRange(cheapestApi.totalMonthlyUsd);
+    return {
+      kind: 'api',
+      providerLabel: `${API_PROVIDER_LABELS[cheapestApi.provider]} (${cheapestApi.label})`,
+      monthlyUsd: cheapestApi.totalMonthlyUsd,
+      headline: `Start with an API — about ${formatUsd(cheapestApi.totalMonthlyUsd)}/mo at your volume`,
+      detail:
+        'Week 1 recommendation: use a hosted API and ship. Revisit GPU rental when you have steady traffic and a reason to self-host (privacy, fine-tuning, cost at scale).',
+      planningMinUsd: range.min,
+      planningMaxUsd: range.max,
+    };
+  }
+
+  const gpu = cheapestGpu!;
+  const range = planningRange(gpu.totalMonthlyUsd);
+  return {
+    kind: 'gpu',
+    providerLabel: `${MARKETPLACE_LABELS[gpu.provider]} (${gpu.matchedTier})`,
+    monthlyUsd: gpu.totalMonthlyUsd,
+    headline: `GPU rental may win at your volume — about ${formatUsd(gpu.totalMonthlyUsd)}/mo`,
+    detail:
+      'Still expect setup time (vLLM, monitoring, on-call). APIs are usually faster to ship in week 1 even if GPU looks cheaper on paper.',
+    planningMinUsd: range.min,
+    planningMaxUsd: range.max,
+  };
+}
+
+function formatUsd(n: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
 export function collectInferenceWarnings(
   profile: InferenceProfile,
   catalog?: import('../catalog/types').ModelCatalog,
 ): Warning[] {
   const warnings: Warning[] = [];
+
+  warnings.push({
+    id: 'FOUNDER_PLANNING',
+    severity: 'info',
+    message: `Week-1 planning estimate only — expect ±${Math.round(PLANNING_MARGIN * 100)}% in real bills. Excludes cold starts, egress, storage, and eng time.`,
+  });
 
   if (profile.model) {
     const vram = computeModelVram({
@@ -178,32 +245,33 @@ export function collectInferenceWarnings(
       tokensPerSecond: profile.tokensPerSecond,
       catalog,
     });
-    warnings.push(...collectModelVramWarnings(vram, profile.gpu));
+    if (vram.exceedsSingleGpu) {
+      warnings.push(
+        ...collectModelVramWarnings(vram, profile.gpu).filter(
+          (w) => w.id === 'MODEL_EXCEEDS_VRAM',
+        ),
+      );
+    }
   }
 
-  if (profile.billing === 'serverless' && profile.avgSecondsPerRequest < 1) {
+  if (
+    profile.inputTokensPerRequest == null ||
+    profile.outputTokensPerRequest == null
+  ) {
     warnings.push({
-      id: 'SHORT_REQUESTS',
+      id: 'USE_TOKEN_INPUTS',
       severity: 'info',
       message:
-        'Sub-second requests may under-estimate cold-start overhead on serverless.',
+        'Add inputTokensPerRequest and outputTokensPerRequest for clearer week-1 math (e.g. 800 in / 250 out).',
     });
   }
 
-  if (profile.workers === 1) {
-    warnings.push({
-      id: 'SINGLE_WORKER',
-      severity: 'info',
-      message: 'Single worker — no redundancy for production traffic.',
-    });
-  }
-
-  if (profile.requestsPerDay > 100_000) {
+  if (profile.billing === 'serverless' && profile.requestsPerDay > 50_000) {
     warnings.push({
       id: 'HIGH_TRAFFIC',
       severity: 'info',
       message:
-        'High request volume — consider pod/always-on billing if utilization stays high.',
+        'High volume — compare always-on GPU pods; serverless cold starts add cost not modeled here.',
     });
   }
 
@@ -214,7 +282,10 @@ export function estimateInference(
   profile: InferenceProfile,
   sheets: MarketplacePriceSheet[],
   catalog?: import('../catalog/types').ModelCatalog,
+  apiSheets: ApiPriceSheet[] = [],
 ): InferenceEstimateResult {
+  const apiProviders = estimateApiProviders(profile, apiSheets);
+
   const providers: MarketplaceProviderEstimate[] = [];
   const errors: string[] = [];
 
@@ -226,52 +297,57 @@ export function estimateInference(
     }
   }
 
-  if (providers.length === 0) {
+  if (providers.length === 0 && apiProviders.length === 0) {
     throw new Error(
-      `No marketplace estimates for ${profile.gpu}:\n${errors.join('\n')}`,
+      `No estimates for ${profile.gpu}:\n${errors.join('\n')}`,
     );
   }
 
   const warnings = collectInferenceWarnings(profile, catalog);
+  const sortedGpu = providers.sort((a, b) => a.totalMonthlyUsd - b.totalMonthlyUsd);
 
-  // Serverless ↔ pod break-even hints (cheapest provider with both rates)
-  const withBreakEven = providers.filter(
-    (p) => p.podBreakEvenRequestsPerDay != null,
-  );
-  if (withBreakEven.length > 0) {
-    const ref = withBreakEven[0];
-    const breakEven = ref.podBreakEvenRequestsPerDay!;
-    if (profile.billing === 'serverless' && profile.requestsPerDay >= breakEven) {
-      warnings.push({
-        id: 'POD_CHEAPER',
-        severity: 'info',
-        message: `At ${profile.requestsPerDay.toLocaleString()} req/day you're above the ~${breakEven.toLocaleString()} req/day break-even on ${MARKETPLACE_LABELS[ref.provider]} — pod billing may be cheaper.`,
-      });
-    } else if (
-      profile.billing === 'pod' &&
-      profile.requestsPerDay < breakEven
-    ) {
-      warnings.push({
-        id: 'SERVERLESS_CHEAPER',
-        severity: 'info',
-        message: `Below ~${breakEven.toLocaleString()} req/day, serverless on ${MARKETPLACE_LABELS[ref.provider]} is likely cheaper than always-on pods.`,
-      });
+  if (sortedGpu.length > 0) {
+    const withBreakEven = sortedGpu.filter(
+      (p) => p.podBreakEvenRequestsPerDay != null,
+    );
+    if (withBreakEven.length > 0) {
+      const ref = withBreakEven[0];
+      const breakEven = ref.podBreakEvenRequestsPerDay!;
+      if (
+        profile.billing === 'serverless' &&
+        profile.requestsPerDay >= breakEven
+      ) {
+        warnings.push({
+          id: 'POD_CHEAPER',
+          severity: 'info',
+          message: `Above ~${breakEven.toLocaleString()} req/day, an always-on GPU pod on ${MARKETPLACE_LABELS[ref.provider]} may beat serverless.`,
+        });
+      }
     }
   }
 
   if (errors.length > 0) {
     warnings.push({
-      id: 'PARTIAL_PROVIDERS',
+      id: 'PARTIAL_GPU_PROVIDERS',
       severity: 'info',
-      message: `Some providers omitted: ${errors.join('; ')}`,
+      message: `Some GPU hosts omitted: ${errors.join('; ')}`,
     });
   }
 
   const requestsPerMonth = profile.requestsPerDay * DAYS_PER_MONTH;
   const tpm = tokensPerMonth(profile, catalog);
-  const cheapest = providers.reduce((a, b) =>
-    a.totalMonthlyUsd < b.totalMonthlyUsd ? a : b,
-  );
+
+  const allOptions = [
+    ...apiProviders.map((a) => ({
+      usd: a.totalMonthlyUsd,
+      perM: a.usdPerMillionTokens,
+    })),
+    ...sortedGpu.map((g) => ({
+      usd: g.totalMonthlyUsd,
+      perM: g.usdPerMillionTokens,
+    })),
+  ];
+  const cheapestOverall = allOptions.sort((a, b) => a.usd - b.usd)[0];
 
   let modelSummary: InferenceEstimateResult['model'];
   if (profile.model) {
@@ -293,9 +369,13 @@ export function estimateInference(
     };
   }
 
+  const verdict = buildFounderVerdict(apiProviders, sortedGpu);
+
   return {
     profile,
-    providers: providers.sort((a, b) => a.totalMonthlyUsd - b.totalMonthlyUsd),
+    apiProviders,
+    providers: sortedGpu,
+    verdict,
     warnings,
     model: modelSummary,
     totals: {
@@ -305,7 +385,7 @@ export function estimateInference(
         requestsPerMonth * profile.avgSecondsPerRequest * profile.workers,
       tokensPerMonth: tpm,
       workers: profile.workers,
-      usdPerMillionTokens: cheapest.usdPerMillionTokens,
+      usdPerMillionTokens: cheapestOverall?.perM ?? null,
     },
   };
 }
@@ -320,3 +400,5 @@ export const MARKETPLACE_LABELS: Record<
   lambda: 'Lambda Labs',
   vast: 'Vast.ai',
 };
+
+export { API_PROVIDER_LABELS };

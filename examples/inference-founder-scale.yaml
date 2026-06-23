@@ -1,0 +1,11 @@
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: scaling-up
+spec:
+  model: llama-3.1-8b
+  requestsPerDay: 50000
+  inputTokensPerRequest: 600
+  outputTokensPerRequest: 300
+  billing: serverless
+  workers: 1

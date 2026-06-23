@@ -1,0 +1,11 @@
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: support-chatbot
+spec:
+  model: llama-3.1-8b
+  requestsPerDay: 3000
+  inputTokensPerRequest: 800
+  outputTokensPerRequest: 250
+  billing: serverless
+  workers: 1

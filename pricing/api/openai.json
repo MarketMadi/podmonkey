@@ -1,0 +1,16 @@
+{
+  "provider": "openai",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T18:00:00.000Z",
+  "sources": ["https://openai.com/api/pricing/"],
+  "models": [
+    {
+      "catalog_id": "llama-3.1-8b",
+      "api_model": "gpt-4o-mini",
+      "label": "GPT-4o mini (API baseline)",
+      "input_per_million_usd": 0.15,
+      "output_per_million_usd": 0.6,
+      "source": "https://openai.com/api/pricing/ — comparable small-model API tier for week-1 math"
+    }
+  ]
+}

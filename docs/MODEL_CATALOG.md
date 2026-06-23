@@ -111,18 +111,13 @@ metadata:
   name: rag-chatbot
 spec:
   model: llama-3.1-8b
-  quantization: Q4_K_M
-  contextLength: 4096
-  concurrentUsers: 5
+  requestsPerDay: 3000
+  inputTokensPerRequest: 800
+  outputTokensPerRequest: 250
   billing: serverless
-  requestsPerDay: 10000
-  avgSecondsPerRequest: 2
-  workers: 1
-  # optional override:
-  # tokensPerSecond: 50
 ```
 
-`spec.gpu` is optional — derived from VRAM fit.
+`inputTokensPerRequest` / `outputTokensPerRequest` are the founder-friendly inputs (prompt+context vs reply). GPU seconds are derived from the model catalog.
 
 ### GPU tier (manual)
 

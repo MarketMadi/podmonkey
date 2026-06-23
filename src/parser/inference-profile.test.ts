@@ -2,92 +2,69 @@ import { describe, expect, it } from 'vitest';
 import { loadModelCatalog } from '../catalog/load';
 import { parseInferenceProfile } from './inference-profile';
 import { estimateInference, podBreakEvenRequestsPerDay } from '../estimator/inference';
+import { loadAllApiPriceSheets } from '../pricing/load-api-sheets';
 import { loadAllMarketplacePriceSheets } from '../pricing/load-marketplace-sheets';
 
 const sheets = loadAllMarketplacePriceSheets();
+const apiSheets = loadAllApiPriceSheets();
 const catalog = loadModelCatalog();
 
-describe('inference profile', () => {
-  it('parses serverless A100 profile', () => {
+const FOUNDER_YAML = `
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: chatbot
+spec:
+  model: llama-3.1-8b
+  requestsPerDay: 3000
+  inputTokensPerRequest: 800
+  outputTokensPerRequest: 250
+  billing: serverless
+  workers: 1
+`;
+
+describe('inference profile (founder)', () => {
+  it('derives seconds from token inputs', () => {
+    const profile = parseInferenceProfile(FOUNDER_YAML, catalog);
+    expect(profile.inputTokensPerRequest).toBe(800);
+    expect(profile.outputTokensPerRequest).toBe(250);
+    expect(profile.avgSecondsPerRequest).toBeGreaterThan(0);
+    expect(profile.gpu).toBe('t4-16gb');
+  });
+
+  it('recommends API for typical week-1 chatbot volume', () => {
+    const profile = parseInferenceProfile(FOUNDER_YAML, catalog);
+    const result = estimateInference(profile, sheets, catalog, apiSheets);
+    expect(result.apiProviders.length).toBeGreaterThan(0);
+    expect(result.verdict.kind).toBe('api');
+    expect(result.verdict.monthlyUsd).toBeLessThan(500);
+    expect(result.warnings.some((w) => w.id === 'FOUNDER_PLANNING')).toBe(true);
+  });
+
+  it('estimates GPU marketplace when model fits', () => {
+    const profile = parseInferenceProfile(FOUNDER_YAML, catalog);
+    const result = estimateInference(profile, sheets, catalog, apiSheets);
+    expect(result.providers.length).toBeGreaterThanOrEqual(3);
+    expect(result.totals.tokensPerMonth).toBe((800 + 250) * 3000 * 30);
+  });
+
+  it('parses advanced GPU override with model + seconds', () => {
     const yaml = `
 apiVersion: podmonkey.io/v1
 kind: InferenceEstimate
 metadata:
   name: test
 spec:
+  model: llama-3.3-70b
   billing: serverless
   gpu: a100-80gb
   requestsPerDay: 1000
-  avgSecondsPerRequest: 2
+  inputTokensPerRequest: 1000
+  outputTokensPerRequest: 500
   workers: 1
 `;
     const profile = parseInferenceProfile(yaml, catalog);
     expect(profile.gpu).toBe('a100-80gb');
-    expect(profile.billing).toBe('serverless');
-  });
-
-  it('derives GPU tier from model catalog', () => {
-    const yaml = `
-apiVersion: podmonkey.io/v1
-kind: InferenceEstimate
-metadata:
-  name: test
-spec:
-  model: llama-3.1-8b
-  quantization: Q4_K_M
-  billing: serverless
-  requestsPerDay: 1000
-  avgSecondsPerRequest: 2
-  workers: 1
-`;
-    const profile = parseInferenceProfile(yaml, catalog);
-    expect(profile.model).toBe('llama-3.1-8b');
-    expect(profile.gpu).toBe('t4-16gb');
-  });
-
-  it('estimates across marketplace providers', () => {
-    const profile = {
-      name: 'test',
-      billing: 'serverless' as const,
-      gpu: 'a100-80gb' as const,
-      requestsPerDay: 10000,
-      avgSecondsPerRequest: 2,
-      workers: 1,
-    };
-    const result = estimateInference(profile, sheets, catalog);
-    expect(result.providers.length).toBeGreaterThanOrEqual(3);
-    expect(result.providers[0].totalMonthlyUsd).toBeGreaterThan(0);
-    const runpod = result.providers.find((p) => p.provider === 'runpod');
-    expect(runpod).toBeDefined();
-    expect(runpod!.totalMonthlyUsd).toBeCloseTo(456, 0);
-    expect(runpod!.usdPerMillionTokens).toBeGreaterThan(0);
-    expect(runpod!.podBreakEvenRequestsPerDay).toBeGreaterThan(0);
-  });
-
-  it('model profile includes VRAM summary and $/1M tokens', () => {
-    const profile = parseInferenceProfile(
-      `
-apiVersion: podmonkey.io/v1
-kind: InferenceEstimate
-metadata:
-  name: rag
-spec:
-  model: llama-3.1-8b
-  quantization: Q4_K_M
-  contextLength: 8192
-  concurrentUsers: 10
-  billing: serverless
-  requestsPerDay: 10000
-  avgSecondsPerRequest: 2
-  workers: 1
-`,
-      catalog,
-    );
-    const result = estimateInference(profile, sheets, catalog);
-    expect(result.model?.label).toContain('Llama 3.1 8B');
-    expect(result.totals.tokensPerMonth).toBeGreaterThan(0);
-    expect(result.totals.usdPerMillionTokens).toBeGreaterThan(0);
-    expect(result.warnings.some((w) => w.id === 'KV_CACHE_TIGHT')).toBe(true);
   });
 
   it('computes pod break-even requests per day', () => {

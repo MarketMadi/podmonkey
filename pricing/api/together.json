@@ -1,0 +1,32 @@
+{
+  "provider": "together",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T18:00:00.000Z",
+  "sources": ["https://www.together.ai/pricing"],
+  "models": [
+    {
+      "catalog_id": "llama-3.1-8b",
+      "api_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "label": "Llama 3.1 8B Turbo",
+      "input_per_million_usd": 0.18,
+      "output_per_million_usd": 0.18,
+      "source": "https://www.together.ai/pricing — Llama 3.1 8B Instruct Turbo"
+    },
+    {
+      "catalog_id": "llama-3.3-70b",
+      "api_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "label": "Llama 3.3 70B Turbo",
+      "input_per_million_usd": 0.88,
+      "output_per_million_usd": 0.88,
+      "source": "https://www.together.ai/pricing"
+    },
+    {
+      "catalog_id": "qwen2.5-7b",
+      "api_model": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+      "label": "Qwen 2.5 7B Turbo",
+      "input_per_million_usd": 0.3,
+      "output_per_million_usd": 0.3,
+      "source": "https://www.together.ai/pricing"
+    }
+  ]
+}

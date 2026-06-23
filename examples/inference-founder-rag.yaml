@@ -1,0 +1,11 @@
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: rag-prototype
+spec:
+  model: llama-3.1-8b
+  requestsPerDay: 500
+  inputTokensPerRequest: 3000
+  outputTokensPerRequest: 400
+  billing: serverless
+  workers: 1

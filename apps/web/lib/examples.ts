@@ -7,11 +7,10 @@ import monitoringYaml from '../../../examples/monitoring-stack.yaml';
 import etlYaml from '../../../examples/nightly-etl-cronjob.yaml';
 import ghostYaml from '../../../examples/ghost-blog.yaml';
 import vllmGpuYaml from '../../../examples/vllm-gpu-deployment.yaml';
-import inferenceServerlessYaml from '../../../examples/inference-serverless-a100.yaml';
-import inferencePodYaml from '../../../examples/inference-pod-a100.yaml';
-import inferenceModel8bYaml from '../../../examples/inference-model-llama8b.yaml';
+import founderChatbotYaml from '../../../examples/inference-founder-chatbot.yaml';
+import founderRagYaml from '../../../examples/inference-founder-rag.yaml';
+import founderScaleYaml from '../../../examples/inference-founder-scale.yaml';
 import inferenceModel70bYaml from '../../../examples/inference-model-llama70b.yaml';
-import inferenceModelQwen7bYaml from '../../../examples/inference-model-qwen7b.yaml';
 
 export const K8S_EXAMPLES = [
   { id: 'nginx', label: 'nginx + LoadBalancer', yaml: nginxYaml },
@@ -27,29 +26,24 @@ export const K8S_EXAMPLES = [
 
 export const INFERENCE_EXAMPLES = [
   {
-    id: 'model-qwen7b',
-    label: 'Qwen 2.5 7B Q4 — coding / multilingual',
-    yaml: inferenceModelQwen7bYaml,
+    id: 'founder-chatbot',
+    label: 'Week 1 — support chatbot (3k req/day)',
+    yaml: founderChatbotYaml,
   },
   {
-    id: 'model-llama8b',
-    label: 'Llama 3.1 8B Q4 — model picker (auto GPU)',
-    yaml: inferenceModel8bYaml,
+    id: 'founder-rag',
+    label: 'Week 1 — RAG prototype (low traffic)',
+    yaml: founderRagYaml,
+  },
+  {
+    id: 'founder-scale',
+    label: 'Scaling — 50k req/day (GPU vs API?)',
+    yaml: founderScaleYaml,
   },
   {
     id: 'model-llama70b',
-    label: 'Llama 3.3 70B Q4 — pod billing',
+    label: 'Bigger model — Llama 70B',
     yaml: inferenceModel70bYaml,
-  },
-  {
-    id: 'serverless-a100',
-    label: 'Serverless A100 — 10k req/day × 2s',
-    yaml: inferenceServerlessYaml,
-  },
-  {
-    id: 'pod-a100',
-    label: 'Always-on A100 pod',
-    yaml: inferencePodYaml,
   },
 ] as const;
 

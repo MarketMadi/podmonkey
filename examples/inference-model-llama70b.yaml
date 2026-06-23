@@ -5,9 +5,8 @@ metadata:
 spec:
   model: llama-3.3-70b
   quantization: Q4_K_M
-  contextLength: 4096
-  concurrentUsers: 3
+  requestsPerDay: 2000
+  inputTokensPerRequest: 1200
+  outputTokensPerRequest: 400
   billing: pod
-  requestsPerDay: 50000
-  avgSecondsPerRequest: 3
   workers: 1

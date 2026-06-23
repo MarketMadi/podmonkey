@@ -248,8 +248,51 @@ export interface InferenceProfile {
   /** Override catalog default for $/1M token math */
   tokensPerSecond?: number;
   requestsPerDay: number;
+  /** Founder-friendly: tokens per request (derives GPU seconds when set) */
+  inputTokensPerRequest?: number;
+  outputTokensPerRequest?: number;
   avgSecondsPerRequest: number;
   workers: number;
+}
+
+export type ApiProviderId = 'groq' | 'openai' | 'together';
+
+export interface ApiModelPricing {
+  catalog_id: string;
+  api_model: string;
+  label: string;
+  input_per_million_usd: number;
+  output_per_million_usd: number;
+  source: string;
+}
+
+export interface ApiPriceSheet {
+  provider: ApiProviderId;
+  as_of: string;
+  fetched_at: string;
+  sources: string[];
+  models: ApiModelPricing[];
+}
+
+export interface ApiProviderEstimate {
+  provider: ApiProviderId;
+  label: string;
+  apiModel: string;
+  asOf: string;
+  totalMonthlyUsd: number;
+  usdPerMillionTokens: number;
+  inputPerMillionUsd: number;
+  outputPerMillionUsd: number;
+}
+
+export interface FounderVerdict {
+  kind: 'api' | 'gpu';
+  providerLabel: string;
+  monthlyUsd: number;
+  headline: string;
+  detail: string;
+  planningMinUsd: number;
+  planningMaxUsd: number;
 }
 
 export interface MarketplaceGpuTier {
@@ -297,7 +340,9 @@ export interface InferenceModelSummary {
 
 export interface InferenceEstimateResult {
   profile: InferenceProfile;
+  apiProviders: ApiProviderEstimate[];
   providers: MarketplaceProviderEstimate[];
+  verdict: FounderVerdict;
   warnings: Warning[];
   model?: InferenceModelSummary;
   totals: {
@@ -306,7 +351,7 @@ export interface InferenceEstimateResult {
     computeSecondsPerMonth: number;
     tokensPerMonth: number;
     workers: number;
-    /** Cheapest provider $/1M tokens at current billing mode */
+    /** Cheapest option $/1M tokens (API or GPU) */
     usdPerMillionTokens: number | null;
   };
 }

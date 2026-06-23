@@ -80,6 +80,27 @@ Output is a **monthly USD range** per cloud (resource requests vs cheapest fitti
 
 Example manifests: [`examples/`](examples/)
 
+## AI startup math (week 1)
+
+Compare **managed APIs** (Groq, Together, OpenAI baseline) vs **GPU rental** (RunPod, Modal, etc.) before you self-host.
+
+```yaml
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: support-chatbot
+spec:
+  model: llama-3.1-8b
+  requestsPerDay: 3000
+  inputTokensPerRequest: 800    # prompt + context
+  outputTokensPerRequest: 250   # model reply
+  billing: serverless
+```
+
+Load examples from [`examples/inference-founder-*.yaml`](examples/). See [Model catalog](docs/MODEL_CATALOG.md).
+
+> Planning estimate only (±40%). For Kubernetes cluster costs, use the **Kubernetes** tab or `podmonkey estimate -f deployment.yaml`.
+
 ## Documentation
 
 | Doc | What it's for |
