@@ -1,0 +1,280 @@
+{
+  "schema_version": "1",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T18:00:00.000Z",
+  "sources": [
+    "https://gigagpu.com/gpu-memory-utilization-inference/",
+    "https://deploybase.ai/articles/llm-vram-requirements",
+    "https://llmhardware.io/guides/llama33-hardware-requirements",
+    "https://huggingface.co/docs/hub/model-cards"
+  ],
+  "defaults": {
+    "system_overhead_gib": 2,
+    "kv_cache_reference_context_tokens": 4096,
+    "default_quantization": "Q4_K_M"
+  },
+  "models": [
+    {
+      "id": "llama-3.2-3b",
+      "label": "Llama 3.2 3B Instruct",
+      "hf_id": "meta-llama/Llama-3.2-3B-Instruct",
+      "parameters_b": 3,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 2,
+          "source": "https://llmhardware.io/ — ~2 GiB at Q4"
+        },
+        "FP16": {
+          "weights_gib": 6,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.08,
+      "kv_cache_source": "https://gigagpu.com/gpu-memory-utilization-inference/ — scaled from 8B",
+      "default_tokens_per_second": 80,
+      "recommended_gpu_tiers": ["t4-16gb", "l4-24gb"]
+    },
+    {
+      "id": "llama-3.1-8b",
+      "label": "Llama 3.1 8B Instruct",
+      "hf_id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+      "parameters_b": 8,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 5,
+          "source": "https://gigagpu.com/gpu-memory-utilization-inference/ — INT4 weights"
+        },
+        "Q8_0": {
+          "weights_gib": 8.5,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements"
+        },
+        "FP16": {
+          "weights_gib": 16,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.32,
+      "kv_cache_source": "https://gigagpu.com/gpu-memory-utilization-inference/ — 3.2 GiB / 10 users @ 4K",
+      "default_tokens_per_second": 45,
+      "recommended_gpu_tiers": ["t4-16gb", "l4-24gb", "rtx4090-24gb", "a10g-24gb"]
+    },
+    {
+      "id": "mistral-7b",
+      "label": "Mistral 7B Instruct v0.3",
+      "hf_id": "mistralai/Mistral-7B-Instruct-v0.3",
+      "parameters_b": 7,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 4.5,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements — ~3.5–4.5 GiB int4"
+        },
+        "FP16": {
+          "weights_gib": 14,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.28,
+      "kv_cache_source": "Scaled from Llama 8B KV profile",
+      "default_tokens_per_second": 50,
+      "recommended_gpu_tiers": ["t4-16gb", "l4-24gb", "rtx4090-24gb"]
+    },
+    {
+      "id": "llama-3.3-70b",
+      "label": "Llama 3.3 70B Instruct",
+      "hf_id": "meta-llama/Llama-3.3-70B-Instruct",
+      "parameters_b": 70,
+      "quantizations": {
+        "Q2_K": {
+          "weights_gib": 26,
+          "source": "https://llmhardware.io/guides/llama33-hardware-requirements"
+        },
+        "Q4_K_M": {
+          "weights_gib": 43,
+          "source": "https://llmhardware.io/guides/llama33-hardware-requirements"
+        },
+        "Q8_0": {
+          "weights_gib": 75,
+          "source": "https://llmhardware.io/guides/llama33-hardware-requirements"
+        },
+        "FP16": {
+          "weights_gib": 140,
+          "source": "https://gigagpu.com/gpu-memory-utilization-inference/"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 2,
+      "kv_cache_source": "https://gigagpu.com/gpu-memory-utilization-inference/ — 20 GiB / 10 users @ 4K",
+      "default_tokens_per_second": 22,
+      "recommended_gpu_tiers": ["a100-80gb", "h100-80gb"]
+    },
+    {
+      "id": "qwen2.5-72b",
+      "label": "Qwen 2.5 72B Instruct",
+      "hf_id": "Qwen/Qwen2.5-72B-Instruct",
+      "parameters_b": 72,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 36,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements — int4 ~36 GiB"
+        },
+        "FP16": {
+          "weights_gib": 144,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 2.1,
+      "kv_cache_source": "Scaled from Llama 70B KV profile",
+      "default_tokens_per_second": 20,
+      "recommended_gpu_tiers": ["a100-80gb", "h100-80gb"]
+    },
+    {
+      "id": "mixtral-8x7b",
+      "label": "Mixtral 8x7B Instruct",
+      "hf_id": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+      "parameters_b": 47,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 26,
+          "source": "https://deploybase.ai/articles/llm-vram-requirements — MoE active ~13B, weights ~26 GiB Q4"
+        },
+        "FP16": {
+          "weights_gib": 90,
+          "source": "DeployBase MoE estimate"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.9,
+      "kv_cache_source": "MoE — lower KV than dense 70B",
+      "default_tokens_per_second": 35,
+      "recommended_gpu_tiers": ["a100-40gb", "a100-80gb", "rtx4090-24gb"]
+    },
+    {
+      "id": "qwen2.5-7b",
+      "label": "Qwen 2.5 7B Instruct",
+      "hf_id": "Qwen/Qwen2.5-7B-Instruct",
+      "parameters_b": 7.6,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 5,
+          "source": "https://llmrun.dev/model/qwen-qwen2-5-7b — Q4_K_M weights"
+        },
+        "Q8_0": {
+          "weights_gib": 8,
+          "source": "https://llmhardware.io/models/Qwen--Qwen2.5-7B — Q8 ~9 GiB"
+        },
+        "FP16": {
+          "weights_gib": 15,
+          "source": "https://llmrun.dev/model/qwen-qwen2-5-7b — BF16 ~15 GiB"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.3,
+      "kv_cache_source": "Scaled from Llama 8B KV profile",
+      "default_tokens_per_second": 48,
+      "recommended_gpu_tiers": ["t4-16gb", "l4-24gb", "rtx4090-24gb", "a10g-24gb"]
+    },
+    {
+      "id": "mistral-nemo-12b",
+      "label": "Mistral Nemo 12B Instruct",
+      "hf_id": "mistralai/Mistral-Nemo-Instruct-2407",
+      "parameters_b": 12,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 6.9,
+          "source": "https://canitrun.dev/models/mistral-nemo-12b/ — Q4_K_M weights"
+        },
+        "Q8_0": {
+          "weights_gib": 12.2,
+          "source": "https://canitrun.dev/models/mistral-nemo-12b/ — Q8 weights"
+        },
+        "FP16": {
+          "weights_gib": 24.4,
+          "source": "https://canitrun.dev/models/mistral-nemo-12b/ — FP16 weights"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.42,
+      "kv_cache_source": "https://canitrun.dev/models/mistral-nemo-12b/ — scaled from 8K KV row",
+      "default_tokens_per_second": 38,
+      "recommended_gpu_tiers": ["l4-24gb", "rtx4090-24gb", "a10g-24gb", "a100-40gb"]
+    },
+    {
+      "id": "phi-3.5-mini",
+      "label": "Phi-3.5 Mini Instruct",
+      "hf_id": "microsoft/Phi-3.5-mini-instruct",
+      "parameters_b": 3.8,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 2.4,
+          "source": "https://runthismodel.com/models/phi-3.5-mini-instruct — Q4_K_M weights"
+        },
+        "Q8_0": {
+          "weights_gib": 3.8,
+          "source": "https://runthismodel.com/models/phi-3.5-mini-instruct — Q8 weights"
+        },
+        "FP16": {
+          "weights_gib": 7.6,
+          "source": "https://localllms.dev/llm/microsoftphi-35-mini-instruct/ — FP16 ~9.4 GiB total"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.12,
+      "kv_cache_source": "Scaled from Llama 3.2 3B KV profile",
+      "default_tokens_per_second": 85,
+      "recommended_gpu_tiers": ["t4-16gb", "l4-24gb"]
+    },
+    {
+      "id": "gemma-2-9b",
+      "label": "Gemma 2 9B IT",
+      "hf_id": "google/gemma-2-9b-it",
+      "parameters_b": 9.2,
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 6.1,
+          "source": "https://llmrun.dev/model/google-gemma-2-9b-it — Q4_K_M weights"
+        },
+        "Q8_0": {
+          "weights_gib": 10.2,
+          "source": "https://llmrun.dev/model/google-gemma-2-9b-it — Q8 weights"
+        },
+        "FP16": {
+          "weights_gib": 18.5,
+          "source": "https://llmrun.dev/model/google-gemma-2-9b-it — BF16 ~20 GiB"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.35,
+      "kv_cache_source": "Scaled from Llama 8B KV profile",
+      "default_tokens_per_second": 42,
+      "recommended_gpu_tiers": ["t4-16gb", "l4-24gb", "rtx4090-24gb", "a10g-24gb"]
+    },
+    {
+      "id": "deepseek-v3",
+      "label": "DeepSeek V3 (671B MoE)",
+      "hf_id": "deepseek-ai/DeepSeek-V3",
+      "parameters_b": 671,
+      "deployment": "multi_gpu_cluster",
+      "quantizations": {
+        "Q4_K_M": {
+          "weights_gib": 378,
+          "source": "https://canitrun.dev/models/deepseek-v3/ — Q4_K_M weights"
+        },
+        "Q8_0": {
+          "weights_gib": 671,
+          "source": "https://canitrun.dev/models/deepseek-v3/ — Q8 weights"
+        },
+        "FP16": {
+          "weights_gib": 1342,
+          "source": "https://llmhardware.io/guides/deepseek-v3-hardware-requirements"
+        }
+      },
+      "kv_cache_gib_per_user_at_4k": 0.05,
+      "kv_cache_source": "https://canitrun.dev/models/deepseek-v3/ — MLA reduces KV vs dense 70B",
+      "default_tokens_per_second": 25,
+      "recommended_gpu_tiers": ["h100-80gb"]
+    }
+  ],
+  "gpu_tier_vram_gib": {
+    "t4-16gb": 16,
+    "l4-24gb": 24,
+    "a10g-24gb": 24,
+    "rtx4090-24gb": 24,
+    "a100-40gb": 48,
+    "a100-80gb": 80,
+    "h100-80gb": 80
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "provider": "runpod",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T08:00:00.000Z",
+  "sources": [
+    "https://docs.runpod.io/serverless/pricing",
+    "https://www.runpod.io/product/cloud-gpus"
+  ],
+  "hours_per_month": 730,
+  "tiers": [
+    {
+      "id": "t4-16gb",
+      "label": "RTX 4000 / T4 (16 GB)",
+      "gpu_model": "NVIDIA T4",
+      "gpu_memory_gib": 16,
+      "serverless_per_second_usd": 0.00016,
+      "pod_per_hour_usd": 0.39,
+      "source": "RunPod serverless pricing docs + cloud GPUs page"
+    },
+    {
+      "id": "l4-24gb",
+      "label": "L4 / 3090 (24 GB)",
+      "gpu_model": "NVIDIA L4",
+      "gpu_memory_gib": 24,
+      "serverless_per_second_usd": 0.00019,
+      "pod_per_hour_usd": 0.39,
+      "source": "RunPod serverless pricing docs"
+    },
+    {
+      "id": "rtx4090-24gb",
+      "label": "RTX 4090 PRO (24 GB)",
+      "gpu_model": "NVIDIA RTX 4090",
+      "gpu_memory_gib": 24,
+      "serverless_per_second_usd": 0.00031,
+      "pod_per_hour_usd": 0.69,
+      "source": "RunPod serverless pricing docs"
+    },
+    {
+      "id": "a100-40gb",
+      "label": "A6000 / A40 (48 GB)",
+      "gpu_model": "NVIDIA A40",
+      "gpu_memory_gib": 48,
+      "serverless_per_second_usd": 0.00034,
+      "pod_per_hour_usd": 0.44,
+      "source": "RunPod serverless pricing docs"
+    },
+    {
+      "id": "a100-80gb",
+      "label": "A100 (80 GB)",
+      "gpu_model": "NVIDIA A100",
+      "gpu_memory_gib": 80,
+      "serverless_per_second_usd": 0.00076,
+      "pod_per_hour_usd": 1.39,
+      "source": "RunPod serverless pricing docs + cloud GPUs page"
+    },
+    {
+      "id": "h100-80gb",
+      "label": "H100 PRO (80 GB)",
+      "gpu_model": "NVIDIA H100",
+      "gpu_memory_gib": 80,
+      "serverless_per_second_usd": 0.00116,
+      "pod_per_hour_usd": 2.89,
+      "source": "RunPod serverless pricing docs + cloud GPUs page"
+    }
+  ]
+}

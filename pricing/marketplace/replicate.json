@@ -1,0 +1,45 @@
+{
+  "provider": "replicate",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T08:00:00.000Z",
+  "sources": ["https://replicate.com/docs/billing"],
+  "hours_per_month": 730,
+  "tiers": [
+    {
+      "id": "t4-16gb",
+      "label": "NVIDIA T4",
+      "gpu_model": "NVIDIA T4",
+      "gpu_memory_gib": 16,
+      "serverless_per_second_usd": 0.000225,
+      "pod_per_hour_usd": null,
+      "source": "Replicate billing docs (hardware per second)"
+    },
+    {
+      "id": "l4-24gb",
+      "label": "NVIDIA L4",
+      "gpu_model": "NVIDIA L4",
+      "gpu_memory_gib": 24,
+      "serverless_per_second_usd": 0.000333,
+      "pod_per_hour_usd": null,
+      "source": "Replicate billing docs (hardware per second)"
+    },
+    {
+      "id": "a100-80gb",
+      "label": "NVIDIA A100 80 GB",
+      "gpu_model": "NVIDIA A100",
+      "gpu_memory_gib": 80,
+      "serverless_per_second_usd": 0.0014,
+      "pod_per_hour_usd": null,
+      "source": "Replicate billing docs (hardware per second)"
+    },
+    {
+      "id": "h100-80gb",
+      "label": "NVIDIA H100",
+      "gpu_model": "NVIDIA H100",
+      "gpu_memory_gib": 80,
+      "serverless_per_second_usd": 0.001525,
+      "pod_per_hour_usd": null,
+      "source": "Replicate billing docs (hardware per second)"
+    }
+  ]
+}

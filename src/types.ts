@@ -10,6 +10,7 @@ export interface ContainerResources {
   image: string;
   cpuCores: number;
   memoryGiB: number;
+  gpuCount: number;
   usedLimitsAsProxy: boolean;
   usedDefaults: boolean;
 }
@@ -20,6 +21,7 @@ export interface ParsedWorkload {
   namespace: string;
   replicas: number;
   containers: ContainerResources[];
+  annotations?: Record<string, string>;
 }
 
 export interface ParsedPVC {
@@ -104,7 +106,13 @@ export interface MonthlyUsdRange {
 }
 
 export interface CostLineItem {
-  category: 'compute' | 'storage' | 'load_balancer' | 'ingress' | 'control_plane';
+  category:
+    | 'compute'
+    | 'gpu'
+    | 'storage'
+    | 'load_balancer'
+    | 'ingress'
+    | 'control_plane';
   label: string;
   monthlyUsd: number;
   /** Set when min ≠ max (e.g. compute marginal vs node floor). */
@@ -122,10 +130,13 @@ export interface ProviderEstimate {
   nodeCount: number;
   /** VM type selected for node-floor compute (from catalog). */
   nodeInstanceType: string;
+  /** Set when workload requests GPUs. */
+  gpuInstanceType?: string;
+  gpuCount?: number;
   lineItems: CostLineItem[];
 }
 
-export type WarningSeverity = 'info' | 'warning';
+export type WarningSeverity = 'info' | 'warning' | 'error';
 
 export interface Warning {
   id: string;
@@ -161,6 +172,7 @@ export interface WorkloadSummary {
   cpuCores: number;
   /** Total memory GiB requested (containers × replicas). */
   memoryGiB: number;
+  gpuCount: number;
   /** Compute-only monthly cost range per provider (marginal .. node floor). */
   computeMonthlyUsdRange: Partial<Record<ProviderId, MonthlyUsdRange>>;
 }
@@ -198,8 +210,103 @@ export interface EstimateResult {
   totals: {
     cpuCores: number;
     memoryGiB: number;
+    gpuCount: number;
     storageGiB: number;
     loadBalancerCount: number;
     ingressCount: number;
+  };
+}
+
+/** Normalized GPU tier IDs used across marketplace providers. */
+export type GpuTierId =
+  | 't4-16gb'
+  | 'l4-24gb'
+  | 'a10g-24gb'
+  | 'rtx4090-24gb'
+  | 'a100-40gb'
+  | 'a100-80gb'
+  | 'h100-80gb';
+
+export type MarketplaceProviderId =
+  | 'runpod'
+  | 'modal'
+  | 'replicate'
+  | 'lambda'
+  | 'vast';
+
+export type InferenceBillingMode = 'serverless' | 'pod';
+
+export interface InferenceProfile {
+  name: string;
+  billing: InferenceBillingMode;
+  gpu: GpuTierId;
+  /** Catalog model id, e.g. llama-3.1-8b */
+  model?: string;
+  quantization?: string;
+  contextLength?: number;
+  concurrentUsers?: number;
+  /** Override catalog default for $/1M token math */
+  tokensPerSecond?: number;
+  requestsPerDay: number;
+  avgSecondsPerRequest: number;
+  workers: number;
+}
+
+export interface MarketplaceGpuTier {
+  id: GpuTierId;
+  label: string;
+  gpu_model: string;
+  gpu_memory_gib: number;
+  /** Serverless $/second (scale-to-zero). */
+  serverless_per_second_usd: number | null;
+  /** On-demand pod/VM $/hour (always-on). */
+  pod_per_hour_usd: number | null;
+  source: string;
+}
+
+export interface MarketplacePriceSheet {
+  provider: MarketplaceProviderId;
+  as_of: string;
+  fetched_at: string;
+  sources: string[];
+  hours_per_month: number;
+  tiers: MarketplaceGpuTier[];
+}
+
+export interface MarketplaceProviderEstimate {
+  provider: MarketplaceProviderId;
+  asOf: string;
+  totalMonthlyUsd: number;
+  lineItems: CostLineItem[];
+  matchedTier: string;
+  billing: InferenceBillingMode;
+  /** Derived: monthly cost / tokens per month × 1M */
+  usdPerMillionTokens: number | null;
+  /** Requests/day where pod billing equals serverless for this tier */
+  podBreakEvenRequestsPerDay: number | null;
+}
+
+export interface InferenceModelSummary {
+  id: string;
+  label: string;
+  quantization: string;
+  totalVramGiB: number;
+  minGpuTier: GpuTierId;
+  tokensPerSecond: number;
+}
+
+export interface InferenceEstimateResult {
+  profile: InferenceProfile;
+  providers: MarketplaceProviderEstimate[];
+  warnings: Warning[];
+  model?: InferenceModelSummary;
+  totals: {
+    gpuTier: GpuTierId;
+    requestsPerMonth: number;
+    computeSecondsPerMonth: number;
+    tokensPerMonth: number;
+    workers: number;
+    /** Cheapest provider $/1M tokens at current billing mode */
+    usdPerMillionTokens: number | null;
   };
 }

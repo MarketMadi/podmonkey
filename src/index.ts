@@ -11,6 +11,13 @@ export {
   loadAllGpuPriceSheets,
   listAvailableGpuSheets,
 } from './pricing/load-gpu-sheets';
+export {
+  loadMarketplacePriceSheet,
+  loadAllMarketplacePriceSheets,
+  listMarketplaceProviders,
+} from './pricing/load-marketplace-sheets';
+export { parseInferenceProfile, isInferenceProfileYaml } from './parser/inference-profile';
+export { estimateInference, MARKETPLACE_LABELS } from './estimator/inference';
 export { runEstimate, readYamlInput } from './cli/run-estimate';
 export {
   formatEstimateMarkdown,

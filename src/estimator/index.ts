@@ -2,6 +2,7 @@ import type {
   CostLineItem,
   EstimateOptions,
   EstimateResult,
+  GpuPriceSheet,
   ParsedWorkload,
   ParseResult,
   PriceSheet,
@@ -11,6 +12,7 @@ import type {
 } from '../types';
 import { assessConfidence } from '../pricing/confidence';
 import { resolveRates } from '../pricing/derive-rates';
+import { computeGpuFloorMonthly } from './inference';
 import { computeNodeFloorMonthly } from '../pricing/node-floor';
 import { storageRateGiBMonth } from '../pricing/storage-rate';
 import { roundUsd } from '../units';
@@ -19,31 +21,37 @@ import { collectWarnings } from '../warnings/index';
 function workloadTotals(workload: ParsedWorkload): {
   cpuCores: number;
   memoryGiB: number;
+  gpuCount: number;
 } {
   let cpuCores = 0;
   let memoryGiB = 0;
+  let gpuCount = 0;
   for (const c of workload.containers) {
     cpuCores += c.cpuCores * workload.replicas;
     memoryGiB += c.memoryGiB * workload.replicas;
+    gpuCount += c.gpuCount * workload.replicas;
   }
-  return { cpuCores, memoryGiB };
+  return { cpuCores, memoryGiB, gpuCount };
 }
 
 function sumWorkloadResources(parse: ParseResult): {
   cpuCores: number;
   memoryGiB: number;
+  gpuCount: number;
 } {
   let cpuCores = 0;
   let memoryGiB = 0;
+  let gpuCount = 0;
 
   for (const w of parse.workloads) {
     for (const c of w.containers) {
       cpuCores += c.cpuCores * w.replicas;
       memoryGiB += c.memoryGiB * w.replicas;
+      gpuCount += c.gpuCount * w.replicas;
     }
   }
 
-  return { cpuCores, memoryGiB };
+  return { cpuCores, memoryGiB, gpuCount };
 }
 
 function computeMarginalMonthly(
@@ -114,12 +122,71 @@ export function estimateForProvider(
   parse: ParseResult,
   sheet: PriceSheet,
   options: EstimateOptions = {},
+  gpuSheets: GpuPriceSheet[] = [],
 ): ProviderEstimate {
-  const { cpuCores, memoryGiB } = sumWorkloadResources(parse);
+  const { cpuCores, memoryGiB, gpuCount } = sumWorkloadResources(parse);
   const minNodes = options.minNodes ?? 1;
 
-  const compute = computeCostRange(cpuCores, memoryGiB, sheet, minNodes);
-  const nodeInstance = compute.instanceType;
+  const gpuSheet = gpuSheets.find((g) => g.provider === sheet.provider);
+  let compute = computeCostRange(cpuCores, memoryGiB, sheet, minNodes);
+  let nodeInstance = compute.instanceType;
+  let gpuInstanceType: string | undefined;
+  let gpuNodes = compute.nodes;
+
+  const lineItems: CostLineItem[] = [];
+
+  if (gpuCount > 0 && gpuSheet) {
+    const gpuFloor = computeGpuFloorMonthly(
+      gpuCount,
+      cpuCores,
+      memoryGiB,
+      gpuSheet,
+      minNodes,
+    );
+    gpuInstanceType = gpuFloor.instanceType;
+    gpuNodes = gpuFloor.nodes;
+    nodeInstance = gpuFloor.instanceType;
+
+    const cpuMarginal = computeMarginalMonthly(cpuCores, memoryGiB, sheet);
+    const gpuMonthly = gpuFloor.monthlyUsd;
+
+    if (sheet.compute_model === 'node_only') {
+      compute = {
+        min: gpuMonthly,
+        max: gpuMonthly,
+        nodes: gpuFloor.nodes,
+        instanceType: gpuFloor.instanceType,
+      };
+    } else {
+      compute = {
+        min: Math.min(cpuMarginal, gpuMonthly),
+        max: Math.max(cpuMarginal, gpuMonthly),
+        nodes: gpuFloor.nodes,
+        instanceType: gpuFloor.instanceType,
+      };
+    }
+
+    lineItems.push({
+      category: 'gpu',
+      label: `GPU nodes (×${gpuFloor.nodes} ${gpuFloor.instanceType}, ${gpuFloor.gpuModel})`,
+      monthlyUsd: gpuMonthly,
+    });
+  } else {
+    const computeLabel =
+      sheet.compute_model === 'node_only'
+        ? `Compute (nodes × ${nodeInstance})`
+        : `Compute (requests .. ${compute.nodes}× ${nodeInstance})`;
+
+    lineItems.push({
+      category: 'compute',
+      label: computeLabel,
+      monthlyUsd: compute.max,
+      monthlyUsdRange:
+        compute.min !== compute.max
+          ? { min: compute.min, max: compute.max }
+          : undefined,
+    });
+  }
 
   const storageCost = storageCostMonthly(parse, sheet);
 
@@ -136,21 +203,7 @@ export function estimateForProvider(
   const totalMin = roundUsd(compute.min + fixedOverhead);
   const totalMax = roundUsd(compute.max + fixedOverhead);
 
-  const computeLabel =
-    sheet.compute_model === 'node_only'
-      ? `Compute (nodes × ${nodeInstance})`
-      : `Compute (requests .. ${compute.nodes}× ${nodeInstance})`;
-
-  const lineItems: CostLineItem[] = [
-    {
-      category: 'compute',
-      label: computeLabel,
-      monthlyUsd: compute.max,
-      monthlyUsdRange:
-        compute.min !== compute.max
-          ? { min: compute.min, max: compute.max }
-          : undefined,
-    },
+  lineItems.push(
     {
       category: 'storage',
       label: 'Persistent volumes',
@@ -175,7 +228,7 @@ export function estimateForProvider(
       label: `${sheet.service} control plane`,
       monthlyUsd: cpCost,
     },
-  ];
+  );
 
   return {
     provider: sheet.provider,
@@ -187,8 +240,10 @@ export function estimateForProvider(
       min: compute.min,
       max: compute.max,
     },
-    nodeCount: compute.nodes,
+    nodeCount: gpuNodes,
     nodeInstanceType: nodeInstance,
+    gpuInstanceType,
+    gpuCount: gpuCount > 0 ? gpuCount : undefined,
     lineItems,
   };
 }
@@ -197,23 +252,25 @@ export function estimate(
   parse: ParseResult,
   sheets: PriceSheet[],
   options: EstimateOptions = {},
+  gpuSheets: GpuPriceSheet[] = [],
 ): EstimateResult {
-  const { cpuCores, memoryGiB } = sumWorkloadResources(parse);
+  const { cpuCores, memoryGiB, gpuCount } = sumWorkloadResources(parse);
   const storageGiB = parse.pvcs.reduce((s, p) => s + p.storageGiB, 0);
   const loadBalancerCount = parse.services.filter(
     (s) => s.type === 'LoadBalancer',
   ).length;
   const ingressCount = parse.ingresses.length;
 
-  const warnings = collectWarnings(parse);
+  const warnings = collectWarnings(parse, gpuSheets);
   const confidence = assessConfidence(parse);
 
   const providers = sheets.map((sheet) =>
-    estimateForProvider(parse, sheet, options),
+    estimateForProvider(parse, sheet, options, gpuSheets),
   );
 
   const workloads: WorkloadSummary[] = parse.workloads.map((w) => {
-    const { cpuCores: wCpu, memoryGiB: wMem } = workloadTotals(w);
+    const { cpuCores: wCpu, memoryGiB: wMem, gpuCount: wGpu } =
+      workloadTotals(w);
     const computeMonthlyUsdRange: Partial<
       Record<ProviderId, { min: number; max: number }>
     > = {};
@@ -231,6 +288,7 @@ export function estimate(
       replicas: w.replicas,
       cpuCores: wCpu,
       memoryGiB: wMem,
+      gpuCount: wGpu,
       computeMonthlyUsdRange,
     };
   });
@@ -240,7 +298,14 @@ export function estimate(
     warnings,
     workloads,
     confidence,
-    totals: { cpuCores, memoryGiB, storageGiB, loadBalancerCount, ingressCount },
+    totals: {
+      cpuCores,
+      memoryGiB,
+      gpuCount,
+      storageGiB,
+      loadBalancerCount,
+      ingressCount,
+    },
   };
 }
 

@@ -30,6 +30,17 @@ function name(doc: Record<string, unknown>): string {
   return (meta?.name as string) ?? 'unknown';
 }
 
+function parseGpuCount(requests: Record<string, string>, limits: Record<string, string>): number {
+  for (const key of ['nvidia.com/gpu', 'amd.com/gpu']) {
+    const raw = requests[key] ?? limits[key];
+    if (raw !== undefined) {
+      const n = Number.parseInt(String(raw), 10);
+      if (!Number.isNaN(n) && n > 0) return n;
+    }
+  }
+  return 0;
+}
+
 function containerResources(
   container: Record<string, unknown>,
   defaults: PriceSheet['defaults'],
@@ -65,6 +76,7 @@ function containerResources(
     image: (container.image as string) ?? '',
     cpuCores: cpu,
     memoryGiB: memory,
+    gpuCount: parseGpuCount(requests, limits),
     usedLimitsAsProxy,
     usedDefaults,
   };
@@ -145,6 +157,10 @@ function workloadFromDoc(
   }
 
   const podSpec = template?.spec as Record<string, unknown> | undefined;
+  const templateMeta = template?.metadata as Record<string, unknown> | undefined;
+  const annotations = templateMeta?.annotations as
+    | Record<string, string>
+    | undefined;
 
   return {
     kind,
@@ -152,6 +168,7 @@ function workloadFromDoc(
     namespace: ns(doc),
     replicas: replicasFor(kind, doc, defaults),
     containers: podTemplateContainers(podSpec, defaults),
+    annotations,
   };
 }
 

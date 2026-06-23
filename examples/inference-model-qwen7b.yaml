@@ -1,0 +1,13 @@
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: qwen-coding
+spec:
+  model: qwen2.5-7b
+  quantization: Q4_K_M
+  contextLength: 8192
+  concurrentUsers: 3
+  billing: serverless
+  requestsPerDay: 20000
+  avgSecondsPerRequest: 1.5
+  workers: 1

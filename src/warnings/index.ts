@@ -1,6 +1,34 @@
-import type { ParseResult, Warning } from '../types';
+import type { GpuPriceSheet, ParseResult, Warning } from '../types';
+import { computeModelVram } from '../catalog/resolve';
+import { collectModelVramWarnings } from '../catalog/warnings';
+import { sumGpuCount } from '../estimator/inference';
 
-export function collectWarnings(parse: ParseResult): Warning[] {
+function modelFromAnnotations(
+  annotations?: Record<string, string>,
+): {
+  modelId: string;
+  quantization?: string;
+  contextLength?: number;
+  concurrentUsers?: number;
+} | null {
+  if (!annotations) return null;
+  const modelId = annotations['podmonkey.io/model'];
+  if (!modelId) return null;
+  const quant = annotations['podmonkey.io/quantization'];
+  const ctx = annotations['podmonkey.io/context-length'];
+  const users = annotations['podmonkey.io/concurrent-users'];
+  return {
+    modelId,
+    quantization: quant,
+    contextLength: ctx ? Number.parseInt(ctx, 10) : undefined,
+    concurrentUsers: users ? Number.parseInt(users, 10) : undefined,
+  };
+}
+
+export function collectWarnings(
+  parse: ParseResult,
+  gpuSheets: GpuPriceSheet[] = [],
+): Warning[] {
   const warnings: Warning[] = [];
 
   for (const w of parse.workloads) {
@@ -40,6 +68,14 @@ export function collectWarnings(parse: ParseResult): Warning[] {
           resource: cref,
         });
       }
+      if (c.gpuCount > 0) {
+        warnings.push({
+          id: 'GPU_REQUEST',
+          severity: 'info',
+          message: `Requests ${c.gpuCount} GPU(s) — estimate uses GPU node floor when pricing available.`,
+          resource: cref,
+        });
+      }
       if (c.image.endsWith(':latest') || !c.image.includes(':')) {
         warnings.push({
           id: 'IMAGE_LATEST',
@@ -61,6 +97,32 @@ export function collectWarnings(parse: ParseResult): Warning[] {
         resource: ref,
       });
     }
+
+    const modelSpec = modelFromAnnotations(w.annotations);
+    const gpuContainers = w.containers.filter((c) => c.gpuCount > 0);
+    if (modelSpec && gpuContainers.length > 0) {
+      try {
+        const vram = computeModelVram({
+          modelId: modelSpec.modelId,
+          quantization: modelSpec.quantization,
+          contextLength: modelSpec.contextLength,
+          concurrentUsers: modelSpec.concurrentUsers,
+        });
+        warnings.push(
+          ...collectModelVramWarnings(vram).map((warn) => ({
+            ...warn,
+            resource: ref,
+          })),
+        );
+      } catch (e) {
+        warnings.push({
+          id: 'UNKNOWN_MODEL',
+          severity: 'warning',
+          message: e instanceof Error ? e.message : String(e),
+          resource: ref,
+        });
+      }
+    }
   }
 
   const lbCount = parse.services.filter((s) => s.type === 'LoadBalancer').length;
@@ -78,6 +140,19 @@ export function collectWarnings(parse: ParseResult): Warning[] {
       severity: 'info',
       message: `${parse.ingresses.length} Ingress resource(s) may add LB/controller fees on cloud providers.`,
     });
+  }
+
+  const totalGpus = sumGpuCount(parse);
+  if (totalGpus > 0) {
+    const covered = new Set(gpuSheets.map((s) => s.provider));
+    if (covered.size === 0) {
+      warnings.push({
+        id: 'GPU_NO_PRICING',
+        severity: 'warning',
+        message:
+          'Workload requests GPUs but no GPU price sheets are loaded — GPU cost not included.',
+      });
+    }
   }
 
   return warnings;

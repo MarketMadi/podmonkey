@@ -1,0 +1,36 @@
+{
+  "provider": "lambda",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T08:00:00.000Z",
+  "sources": ["https://lambda.ai/instances"],
+  "hours_per_month": 730,
+  "tiers": [
+    {
+      "id": "a100-40gb",
+      "label": "NVIDIA A100 40 GB SXM",
+      "gpu_model": "NVIDIA A100",
+      "gpu_memory_gib": 40,
+      "serverless_per_second_usd": null,
+      "pod_per_hour_usd": 1.99,
+      "source": "Lambda instances page ($/GPU/hr)"
+    },
+    {
+      "id": "a100-80gb",
+      "label": "NVIDIA A100 80 GB SXM",
+      "gpu_model": "NVIDIA A100",
+      "gpu_memory_gib": 80,
+      "serverless_per_second_usd": null,
+      "pod_per_hour_usd": 2.79,
+      "source": "Lambda instances page ($/GPU/hr)"
+    },
+    {
+      "id": "h100-80gb",
+      "label": "NVIDIA H100 SXM",
+      "gpu_model": "NVIDIA H100",
+      "gpu_memory_gib": 80,
+      "serverless_per_second_usd": null,
+      "pod_per_hour_usd": 3.99,
+      "source": "Lambda instances page ($/GPU/hr)"
+    }
+  ]
+}

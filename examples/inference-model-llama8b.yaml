@@ -1,0 +1,13 @@
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: llama-rag
+spec:
+  model: llama-3.1-8b
+  quantization: Q4_K_M
+  contextLength: 4096
+  concurrentUsers: 5
+  billing: serverless
+  requestsPerDay: 10000
+  avgSecondsPerRequest: 2
+  workers: 1

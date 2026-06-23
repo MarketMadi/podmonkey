@@ -1,0 +1,27 @@
+{
+  "provider": "vast",
+  "as_of": "2026-06-23",
+  "fetched_at": "2026-06-23T08:00:00.000Z",
+  "sources": ["https://console.vast.ai/api/v0/bundles/"],
+  "hours_per_month": 730,
+  "tiers": [
+    {
+      "id": "rtx4090-24gb",
+      "label": "RTX 4090 (marketplace min)",
+      "gpu_model": "NVIDIA RTX 4090",
+      "gpu_memory_gib": 24,
+      "serverless_per_second_usd": null,
+      "pod_per_hour_usd": 0.1339,
+      "source": "Vast.ai bundles API — minimum $/GPU-hr for RTX 4090"
+    },
+    {
+      "id": "h100-80gb",
+      "label": "H100 (marketplace min)",
+      "gpu_model": "NVIDIA H100",
+      "gpu_memory_gib": 80,
+      "serverless_per_second_usd": null,
+      "pod_per_hour_usd": 1.4678,
+      "source": "Vast.ai bundles API — minimum $/GPU-hr for H100"
+    }
+  ]
+}

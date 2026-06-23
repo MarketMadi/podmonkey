@@ -1,0 +1,10 @@
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: always-on-vllm
+spec:
+  billing: pod
+  gpu: a100-80gb
+  requestsPerDay: 86400
+  avgSecondsPerRequest: 1
+  workers: 1

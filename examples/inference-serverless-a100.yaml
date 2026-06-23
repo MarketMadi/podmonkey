@@ -1,0 +1,10 @@
+apiVersion: podmonkey.io/v1
+kind: InferenceEstimate
+metadata:
+  name: llama-api
+spec:
+  billing: serverless
+  gpu: a100-80gb
+  requestsPerDay: 10000
+  avgSecondsPerRequest: 2
+  workers: 1
