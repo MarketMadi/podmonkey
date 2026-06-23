@@ -14,6 +14,8 @@ export interface CatalogModel {
   kv_cache_gib_per_user_at_4k: number;
   kv_cache_source: string;
   default_tokens_per_second: number;
+  /** Optional override; else decode_tps × catalog prefill ratio */
+  prefill_tokens_per_second?: number;
   recommended_gpu_tiers: GpuTierId[];
 }
 
@@ -26,6 +28,9 @@ export interface ModelCatalog {
     system_overhead_gib: number;
     kv_cache_reference_context_tokens: number;
     default_quantization: string;
+    /** Prefill throughput ≈ decode × this ratio (vLLM-style single-request). */
+    prefill_vs_decode_speed_ratio: number;
+    serverless_cold_start_seconds: number;
   };
   models: CatalogModel[];
   gpu_tier_vram_gib: Record<GpuTierId, number>;

@@ -392,6 +392,18 @@
   font-weight: 600;
 }
 
+.badgeMuted {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  font-size: 0.65rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  background: var(--border);
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .lineItems {
   list-style: none;
   margin: 0;

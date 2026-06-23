@@ -99,7 +99,7 @@ spec:
 
 Load examples from [`examples/inference-founder-*.yaml`](examples/). See [Model catalog](docs/MODEL_CATALOG.md).
 
-> Planning estimate only (±40%). For Kubernetes cluster costs, use the **Kubernetes** tab or `podmonkey estimate -f deployment.yaml`.
+> Planning estimate (API ±10%, GPU ±25%). See [Founder math](docs/FOUNDER_MATH.md).
 
 ## Documentation
 
@@ -108,6 +108,8 @@ Load examples from [`examples/inference-founder-*.yaml`](examples/). See [Model 
 | [GitHub Action](docs/GITHUB_ACTION.md) | CI setup, inputs, policy gates |
 | [Pricing sources](docs/PRICING_SOURCES.md) | Where list prices come from |
 | [Methodology](docs/METHODOLOGY.md) | Formulas and price sheet schema |
+| [Founder math](docs/FOUNDER_MATH.md) | API vs GPU formulas and worked examples |
+| [Model catalog](docs/MODEL_CATALOG.md) | VRAM + model picker for AI estimates |
 | [Roadmap](docs/ROADMAP.md) | What's shipped and what's next |
 
 ## Development

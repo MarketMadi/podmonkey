@@ -533,6 +533,9 @@ function InferenceResults({
                   {isWinner && (
                     <span className={styles.badge}>Best for week 1</span>
                   )}
+                  {p.provider === 'openai' && (
+                    <span className={styles.badgeMuted}>Quality baseline</span>
+                  )}
                   <ul className={styles.lineItems}>
                     <li>
                       <span>$/1M tokens (blended)</span>
@@ -578,6 +581,32 @@ function InferenceResults({
                     <span className={styles.badge}>Cheapest overall</span>
                   )}
                   <ul className={styles.lineItems}>
+                    <li>
+                      <span>Billing</span>
+                      <span>
+                        {p.billing === 'auto' ? 'auto' : p.billing}
+                        {p.billing === 'serverless' ? ' (per second)' : ''}
+                        {p.billing === 'pod' ? ' (always on)' : ''}
+                      </span>
+                    </li>
+                    <li>
+                      <span>~{p.secondsPerRequest.toFixed(1)}s / request</span>
+                      <span>prefill+decode</span>
+                    </li>
+                    {p.serverlessMonthlyUsd != null && p.podMonthlyUsd != null && (
+                      <li>
+                        <span>Serverless vs pod</span>
+                        <span>
+                          {formatUsd(p.serverlessMonthlyUsd)} / {formatUsd(p.podMonthlyUsd)}
+                        </span>
+                      </li>
+                    )}
+                    {p.podUtilizationPercent != null && (
+                      <li>
+                        <span>Pod GPU util.</span>
+                        <span>{p.podUtilizationPercent}%</span>
+                      </li>
+                    )}
                     {p.lineItems.map((item) => (
                       <li key={item.label}>
                         <span>{item.label}</span>

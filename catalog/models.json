@@ -11,7 +11,9 @@
   "defaults": {
     "system_overhead_gib": 2,
     "kv_cache_reference_context_tokens": 4096,
-    "default_quantization": "Q4_K_M"
+    "default_quantization": "Q4_K_M",
+    "prefill_vs_decode_speed_ratio": 8,
+    "serverless_cold_start_seconds": 0.3
   },
   "models": [
     {

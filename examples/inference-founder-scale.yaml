@@ -7,5 +7,4 @@ spec:
   requestsPerDay: 50000
   inputTokensPerRequest: 600
   outputTokensPerRequest: 300
-  billing: serverless
   workers: 1

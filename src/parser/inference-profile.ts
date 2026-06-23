@@ -1,5 +1,6 @@
 import { load } from 'js-yaml';
 import { computeModelVram } from '../catalog/resolve';
+import { gpuSecondsPerRequest } from '../estimator/gpu-time';
 import type { GpuTierId, InferenceBillingMode, InferenceProfile } from '../types';
 
 const GPU_TIERS = new Set<GpuTierId>([
@@ -31,9 +32,9 @@ function asGpuTier(value: unknown): GpuTierId {
 }
 
 function asBilling(value: unknown): InferenceBillingMode {
-  const mode = String(value).toLowerCase().trim();
-  if (mode === 'serverless' || mode === 'pod') return mode;
-  throw new Error('spec.billing must be "serverless" or "pod"');
+  const mode = String(value ?? 'auto').toLowerCase().trim();
+  if (mode === 'serverless' || mode === 'pod' || mode === 'auto') return mode;
+  throw new Error('spec.billing must be "auto", "serverless", or "pod"');
 }
 
 function optionalPositiveInt(value: unknown): number | undefined {
@@ -52,27 +53,6 @@ function optionalPositiveNumber(value: unknown): number | undefined {
     throw new Error(`Expected positive number, got ${value}`);
   }
   return n;
-}
-
-function catalogTokensPerSecond(
-  modelId: string,
-  catalog: import('../catalog/types').ModelCatalog | undefined,
-  opts: {
-    quantization?: string;
-    contextLength?: number;
-    concurrentUsers?: number;
-    tokensPerSecond?: number;
-  },
-): number {
-  const vram = computeModelVram({
-    modelId,
-    quantization: opts.quantization,
-    contextLength: opts.contextLength,
-    concurrentUsers: opts.concurrentUsers,
-    tokensPerSecond: opts.tokensPerSecond,
-    catalog,
-  });
-  return vram.tokensPerSecond;
 }
 
 export function parseInferenceProfile(
@@ -132,14 +112,26 @@ export function parseInferenceProfile(
     outputTokensPerRequest != null &&
     modelId
   ) {
-    const tps = catalogTokensPerSecond(modelId, catalog, {
+    const draft: InferenceProfile = {
+      name: 'draft',
+      billing: asBilling(spec.billing ?? 'auto'),
+      gpu: 't4-16gb',
+      model: modelId,
       quantization,
       contextLength,
       concurrentUsers,
       tokensPerSecond,
-    });
-    avgSecondsPerRequest =
-      (inputTokensPerRequest + outputTokensPerRequest) / tps;
+      inputTokensPerRequest,
+      outputTokensPerRequest,
+      requestsPerDay,
+      avgSecondsPerRequest: 1,
+      workers: Math.floor(workers),
+    };
+    avgSecondsPerRequest = gpuSecondsPerRequest(
+      draft,
+      catalog,
+      'serverless',
+    );
   }
 
   if (avgSecondsPerRequest == null || avgSecondsPerRequest <= 0) {
@@ -171,7 +163,7 @@ export function parseInferenceProfile(
 
   return {
     name: (meta.name as string) ?? 'inference',
-    billing: asBilling(spec.billing ?? 'serverless'),
+    billing: asBilling(spec.billing ?? 'auto'),
     gpu,
     model: modelId,
     quantization,

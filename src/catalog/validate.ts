@@ -31,6 +31,12 @@ export function validateModelCatalog(catalog: ModelCatalog): CatalogValidationEr
   if (!catalog.defaults?.system_overhead_gib) {
     errors.push({ path: 'defaults.system_overhead_gib', message: 'required' });
   }
+  if (!catalog.defaults?.prefill_vs_decode_speed_ratio) {
+    errors.push({
+      path: 'defaults.prefill_vs_decode_speed_ratio',
+      message: 'required',
+    });
+  }
 
   const tierVram = catalog.gpu_tier_vram_gib ?? {};
   for (const tier of GPU_TIER_ORDER) {

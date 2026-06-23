@@ -91,13 +91,16 @@ export function estimateApiProviders(
   return estimates.sort((a, b) => a.totalMonthlyUsd - b.totalMonthlyUsd);
 }
 
-export function planningRange(usd: number): {
+export function planningRange(
+  usd: number,
+  margin: number = PLANNING_MARGIN,
+): {
   min: number;
   max: number;
 } {
   return {
-    min: roundUsd(usd * (1 - PLANNING_MARGIN)),
-    max: roundUsd(usd * (1 + PLANNING_MARGIN)),
+    min: roundUsd(usd * (1 - margin)),
+    max: roundUsd(usd * (1 + margin)),
   };
 }
 

@@ -19,16 +19,16 @@ spec:
   requestsPerDay: 3000
   inputTokensPerRequest: 800
   outputTokensPerRequest: 250
-  billing: serverless
   workers: 1
 `;
 
 describe('inference profile (founder)', () => {
-  it('derives seconds from token inputs', () => {
+  it('derives prefill+decode seconds from token inputs', () => {
     const profile = parseInferenceProfile(FOUNDER_YAML, catalog);
     expect(profile.inputTokensPerRequest).toBe(800);
     expect(profile.outputTokensPerRequest).toBe(250);
-    expect(profile.avgSecondsPerRequest).toBeGreaterThan(0);
+    expect(profile.avgSecondsPerRequest).toBeCloseTo(8.08, 1);
+    expect(profile.billing).toBe('auto');
     expect(profile.gpu).toBe('t4-16gb');
   });
 

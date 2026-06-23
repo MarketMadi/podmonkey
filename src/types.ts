@@ -234,7 +234,7 @@ export type MarketplaceProviderId =
   | 'lambda'
   | 'vast';
 
-export type InferenceBillingMode = 'serverless' | 'pod';
+export type InferenceBillingMode = 'serverless' | 'pod' | 'auto';
 
 export interface InferenceProfile {
   name: string;
@@ -322,11 +322,16 @@ export interface MarketplaceProviderEstimate {
   totalMonthlyUsd: number;
   lineItems: CostLineItem[];
   matchedTier: string;
+  /** Billing mode used for totalMonthlyUsd (auto = cheaper of serverless vs pod). */
   billing: InferenceBillingMode;
-  /** Derived: monthly cost / tokens per month × 1M */
   usdPerMillionTokens: number | null;
-  /** Requests/day where pod billing equals serverless for this tier */
   podBreakEvenRequestsPerDay: number | null;
+  /** Seconds of GPU compute per request (prefill + decode + cold start). */
+  secondsPerRequest: number;
+  serverlessMonthlyUsd: number | null;
+  podMonthlyUsd: number | null;
+  /** Pod GPU busy % at this traffic level (null if pod pricing unavailable). */
+  podUtilizationPercent: number | null;
 }
 
 export interface InferenceModelSummary {
